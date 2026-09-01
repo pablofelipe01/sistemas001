@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>runner</title>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; padding: 12px; color: #111; background: #fff; }
+</style>
+</head>
+<body>
+<script>
+/*
+ * Caja fuerte donde se ejecuta el código del alumno.
+ *
+ * Vive en un iframe con sandbox="allow-scripts" y sin allow-same-origin, así que
+ * corre en un origen opaco: no puede leer cookies, ni localStorage, ni tocar la
+ * app que lo contiene. Lo único que sabe hacer es recibir un trabajo por
+ * postMessage, montarlo, evaluar las pruebas y devolver el resultado.
+ */
+(function () {
+  'use strict'
+
+  var LOGS = []
+  var MAX_LOGS = 400
+
+  function typeOf(v) {
+    if (v === null) return 'null'
+    if (Array.isArray(v)) return 'array'
+    return typeof v
+  }
+
+  /* Imprime un valor como lo haría la consola de Chrome. */
+  function show(v, depth) {
+    depth = depth || 0
+    var t = typeOf(v)
+    if (t === 'string') return depth === 0 ? v : '"' + v + '"'
+    if (t === 'undefined') return 'undefined'
+    if (t === 'null') return 'null'
+    if (t === 'number' || t === 'boolean') return String(v)
+    if (t === 'function') return 'function'
+    if (t === 'array') {
+      if (depth > 2) return '[...]'
+      return '[' + v.map(function (x) { return show(x, depth + 1) }).join(', ') + ']'
+    }
+    if (t === 'object') {
+      if (depth > 2) return '{...}'
+      if (v instanceof Element) return '<' + v.tagName.toLowerCase() + '>'
+      try {
+        return '{ ' + Object.keys(v).map(function (k) { return k + ': ' + show(v[k], depth + 1) }).join(', ') + ' }'
+      } catch (e) { return '[objeto]' }
+    }
+    return String(v)
+  }
+
+  function capture() {
+    var parts = []
+    for (var i = 0; i < arguments.length; i++) parts.push(show(arguments[i], 0))
+    LOGS.push(parts.join(' '))
+    /* Freno de mano: un ciclo infinito que imprime revienta aquí en vez de
+       congelar la pestaña, y el alumno recibe un mensaje que se entiende. */
+    if (LOGS.length > MAX_LOGS) {
+      throw new Error('Imprimiste mas de ' + MAX_LOGS + ' mensajes. Casi seguro tienes un ciclo que no termina nunca.')
+    }
+  }
+
+  console.log = capture
+  console.info = capture
+  console.warn = capture
+  console.debug = capture
+  console.error = capture
+
+  /* alert y prompt congelarían el examen entero, así que se desactivan sin
+     romper el código del alumno: la guía se los enseña y los va a usar. */
+  window.alert = function (m) { LOGS.push(show(m, 0)) }
+  window.confirm = function () { return true }
+  window.prompt = function (_q, def) { return def == null ? '' : String(def) }
+
+  function norm(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/\s+/g, ' ').trim()
+  }
+
+  function lower(s) { return norm(s).toLowerCase() }
+
+  function deepEq(a, b) {
+    if (a === b) return true
+    if (typeof a === 'number' && typeof b === 'number') {
+      if (isNaN(a) && isNaN(b)) return true
+      return Math.abs(a - b) < 1e-9
+    }
+    if (typeOf(a) !== typeOf(b)) return false
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false
+      for (var i = 0; i < a.length; i++) if (!deepEq(a[i], b[i])) return false
+      return true
+    }
+    if (a && b && typeof a === 'object') {
+      var ka = Object.keys(a), kb = Object.keys(b)
+      if (ka.length !== kb.length) return false
+      for (var j = 0; j < ka.length; j++) {
+        if (kb.indexOf(ka[j]) < 0) return false
+        if (!deepEq(a[ka[j]], b[ka[j]])) return false
+      }
+      return true
+    }
+    return false
+  }
+
+  /*
+   * Pasa el valor ESPERADO por el mismo motor del navegador que produjo el
+   * valor real. Así "red", "#FF0000" y "rgb(255,0,0)" quedan iguales, y —lo
+   * más importante— un grosor de borde de 2px se ajusta a los píxeles físicos
+   * del monitor exactamente igual que el del alumno, en vez de compararse
+   * contra un 2px de mentiras que ningún navegador devuelve.
+   *
+   * El probe nace con border-style: solid porque sin estilo de borde cualquier
+   * grosor computa 0px y la comparación no diría nada.
+   * Si la propiedad rechaza el valor, devuelve cadena vacía: eso evita que dos
+   * valores inválidos se "parezcan" por caer los dos en el mismo predeterminado.
+   */
+  function normStyle(prop, value) {
+    var probe = document.createElement('div')
+    probe.style.borderStyle = 'solid'
+    probe.style.setProperty(prop, value)
+    if (probe.style.getPropertyValue(prop) === '') return ''
+    document.body.appendChild(probe)
+    var out = ''
+    try { out = getComputedStyle(probe).getPropertyValue(prop).trim() } catch (e) { out = '' }
+    probe.parentNode.removeChild(probe)
+    return out
+  }
+
+
+  /* Recorre las hojas de estilo de verdad, entrando también a las media queries.
+     Sirve para calificar :hover y @media, que el estilo calculado no revela. */
+  function collectRules(container, out, media) {
+    var rules
+    try { rules = container.cssRules } catch (e) { return }
+    if (!rules) return
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i]
+      if (r.type === 1) {
+        out.push({ sel: norm(r.selectorText).toLowerCase(), style: r.style, media: media || '' })
+      } else if (r.type === 4) {
+        var cond = r.conditionText || (r.media && r.media.mediaText) || ''
+        collectRules(r, out, norm(cond).toLowerCase())
+      } else if (r.type === 12 && r.cssRules) {
+        collectRules(r, out, media)
+      }
+    }
+  }
+
+  function allRules() {
+    var out = []
+    for (var i = 0; i < document.styleSheets.length; i++) collectRules(document.styleSheets[i], out, '')
+    return out
+  }
+
+  var SOLO_PX = /^-?\d*\.?\d+px$/
+
+  /*
+   * Chrome ajusta ciertos valores (sobre todo el grosor de los bordes) a los
+   * píxeles físicos de la pantalla: un borde de 2px puede reportarse como
+   * 1.66667px con zoom o en una pantalla de alta densidad. Comparar textos
+   * exactos reprobaría respuestas correctas según el monitor del alumno, así
+   * que cuando los dos lados son medidas en px se comparan como números con un
+   * margen menor a medio píxel.
+   */
+  function mismaMedida(a, b) {
+    if (!SOLO_PX.test(a) || !SOLO_PX.test(b)) return false
+    return Math.abs(parseFloat(a) - parseFloat(b)) < 0.5
+  }
+
+  function igualEstilo(prop, actual, esperado) {
+    if (actual === esperado) return true
+    var normalizado = normStyle(prop, esperado)
+    if (actual === normalizado) return true
+    return mismaMedida(actual, esperado) || mismaMedida(actual, normalizado)
+  }
+
+  function styleMatches(actual, t) {
+    if (t.oneOf) {
+      for (var i = 0; i < t.oneOf.length; i++) {
+        if (igualEstilo(t.prop, actual, t.oneOf[i])) return true
+      }
+      return false
+    }
+    if (t.has !== undefined && t.has !== null) {
+      return actual.toLowerCase().indexOf(String(t.has).toLowerCase()) >= 0
+    }
+    if (t.eq !== undefined && t.eq !== null) {
+      return igualEstilo(t.prop, actual, t.eq)
+    }
+    return actual !== '' && actual !== 'none' && actual !== '0px'
+  }
+
+  function logMatches(line, t) {
+    if (t.eq !== undefined && t.eq !== null) return lower(line) === lower(t.eq)
+    if (t.has !== undefined && t.has !== null) return lower(line).indexOf(lower(t.has)) >= 0
+    return norm(line) !== ''
+  }
+
+  function evalTest(t, job, root, exprOut, exprIdx) {
+    var extra = ''
+    var ok = false
+    var els, i, c, v
+
+    if (t.t === 'src') {
+      ok = new RegExp(t.re, t.flags || '').test(job.code)
+      if (t.not) ok = !ok
+
+    } else if (t.t === 'exists') {
+      c = root.querySelectorAll(t.sel).length
+      ok = c >= (t.min || 1)
+      if (!ok && c === 0) extra = ''
+
+    } else if (t.t === 'count') {
+      c = root.querySelectorAll(t.sel).length
+      ok = c === t.eq
+      if (!ok) extra = ' (encontré ' + c + ')'
+
+    } else if (t.t === 'text') {
+      els = root.querySelectorAll(t.sel)
+      for (i = 0; i < els.length && !ok; i++) {
+        v = norm(els[i].textContent)
+        if (t.eq !== undefined && t.eq !== null && lower(v) === lower(t.eq)) ok = true
+        if (t.has !== undefined && t.has !== null && lower(v).indexOf(lower(t.has)) >= 0) ok = true
+        if (t.eq === undefined && t.has === undefined && v !== '') ok = true
+      }
+      if (!ok && els.length === 0) extra = ''
+      else if (!ok && els[0]) extra = ' (dice: "' + norm(els[0].textContent).slice(0, 40) + '")'
+
+    } else if (t.t === 'attr') {
+      els = root.querySelectorAll(t.sel)
+      for (i = 0; i < els.length && !ok; i++) {
+        v = els[i].getAttribute(t.name)
+        if (v === null) continue
+        if (t.eq !== undefined && t.eq !== null) { if (lower(v) === lower(t.eq)) ok = true; continue }
+        if (t.has !== undefined && t.has !== null) { if (lower(v).indexOf(lower(t.has)) >= 0) ok = true; continue }
+        if (t.minLen) { if (norm(v).length >= t.minLen) ok = true; continue }
+        ok = true
+      }
+
+    } else if (t.t === 'style') {
+      els = root.querySelectorAll(t.sel)
+      ok = els.length > 0
+      for (i = 0; i < els.length; i++) {
+        var actual = ''
+        try { actual = getComputedStyle(els[i]).getPropertyValue(t.prop).trim() } catch (e) { actual = '' }
+        if (!styleMatches(actual, t)) {
+          ok = false
+          extra = ' (tu valor: ' + (actual || 'nada') + ')'
+          break
+        }
+      }
+
+    } else if (t.t === 'rule') {
+      var wantSel = norm(t.sel).toLowerCase()
+      var wantMedia = t.media ? norm(t.media).toLowerCase() : null
+      var rules = allRules()
+      for (i = 0; i < rules.length && !ok; i++) {
+        var r = rules[i]
+        if (r.sel.indexOf(wantSel) < 0) continue
+        if (wantMedia !== null && r.media.indexOf(wantMedia) < 0) continue
+        var val = norm(r.style.getPropertyValue(t.prop)).toLowerCase()
+        if (val === '') continue
+        if (t.eq !== undefined && t.eq !== null) {
+          var nVal = normStyle(t.prop, val)
+          var nEsp = normStyle(t.prop, t.eq)
+          ok = val === lower(t.eq) || (nVal !== '' && nVal === nEsp) || mismaMedida(val, lower(t.eq))
+        } else if (t.has !== undefined && t.has !== null) {
+          ok = val.indexOf(lower(t.has)) >= 0
+        } else {
+          ok = true
+        }
+      }
+
+    } else if (t.t === 'class') {
+      els = root.querySelectorAll(t.sel)
+      var found = false
+      for (i = 0; i < els.length; i++) if (els[i].classList.contains(t.name)) found = true
+      ok = t.not ? !found : found
+
+    } else if (t.t === 'log') {
+      if (t.at !== undefined && t.at !== null) {
+        ok = LOGS[t.at] !== undefined && logMatches(LOGS[t.at], t)
+      } else {
+        for (i = 0; i < LOGS.length && !ok; i++) ok = logMatches(LOGS[i], t)
+      }
+
+    } else if (t.t === 'logCount') {
+      if (t.eq !== undefined && t.eq !== null) { ok = LOGS.length === t.eq; if (!ok) extra = ' (imprimiste ' + LOGS.length + ')' }
+      else { ok = LOGS.length >= (t.min || 1); if (!ok) extra = ' (imprimiste ' + LOGS.length + ')' }
+
+    } else if (t.t === 'expr') {
+      var out = exprOut[exprIdx]
+      if (!out) { ok = false; extra = ' (no se pudo ejecutar tu código)' }
+      else if (!out.ok) { ok = false; extra = ' (dio error: ' + out.e + ')' }
+      else {
+        ok = deepEq(out.v, t.eq)
+        if (!ok) extra = ' (tu código dio: ' + show(out.v, 1) + ' — se esperaba: ' + show(t.eq, 1) + ')'
+      }
+    }
+
+    return { ok: ok, msg: t.msg + (ok ? '' : extra) }
+  }
+
+  function run(job) {
+    LOGS.length = 0
+    var error = null
+    var root = document
+    var exprOut = []
+
+    var exprs = []
+    var tests = job.tests || []
+    for (var k = 0; k < tests.length; k++) if (tests[k].t === 'expr') exprs.push(tests[k].code)
+
+    try {
+      if (job.lang === 'html') {
+        /* DOMParser entiende el documento completo: doctype, head, title, meta.
+           innerHTML se los comería, y los primeros retos son justamente sobre eso. */
+        var parsed = new DOMParser().parseFromString(job.code || '', 'text/html')
+        root = parsed
+        document.body.innerHTML = parsed.body ? parsed.body.innerHTML : ''
+      } else {
+        document.body.innerHTML = job.html || ''
+        if (job.lang === 'css') {
+          var st = document.createElement('style')
+          st.textContent = job.code || ''
+          document.body.appendChild(st)
+        }
+      }
+    } catch (e) {
+      error = 'No se pudo montar la página: ' + String(e && e.message ? e.message : e)
+    }
+
+    if (!error) {
+      var source = job.lang === 'js' ? (job.code || '') : ''
+      try {
+        /* El eval de adentro es directo, así ve las variables y funciones que
+           el alumno declaró arriba: por eso una prueba puede llamar a sumar(2,3). */
+        var fn = new Function(
+          '__E__',
+          source +
+          '\n;return __E__.map(function (__e) {' +
+          '  try { return { ok: true, v: eval(__e) } }' +
+          '  catch (__x) { return { ok: false, e: String(__x && __x.message ? __x.message : __x) } }' +
+          '});'
+        )
+        exprOut = fn(exprs)
+      } catch (e2) {
+        error = String(e2 && e2.message ? e2.message : e2)
+      }
+    }
+
+    var results = []
+    var ei = 0
+    for (var j = 0; j < tests.length; j++) {
+      var t = tests[j]
+      var idx = t.t === 'expr' ? ei++ : -1
+      try {
+        results.push(evalTest(t, job, root, exprOut, idx))
+      } catch (e3) {
+        results.push({ ok: false, msg: t.msg })
+      }
+    }
+
+    var passed = !error && results.length > 0 && results.every(function (r) { return r.ok })
+
+    return {
+      __cw: 'result',
+      id: job.id,
+      passed: passed,
+      results: results,
+      logs: LOGS.slice(0, 200),
+      error: error || undefined
+    }
+  }
+
+  window.addEventListener('message', function (ev) {
+    var job = ev.data
+    if (!job || job.__cw !== 'run') return
+    var payload
+    try {
+      payload = run(job)
+    } catch (e) {
+      payload = { __cw: 'result', id: job.id, passed: false, results: [], logs: LOGS.slice(0, 200), error: String(e) }
+    }
+    parent.postMessage(payload, '*')
+  })
+
+  parent.postMessage({ __cw: 'ready' }, '*')
+})()
+</script>
+</body>
+</html>
