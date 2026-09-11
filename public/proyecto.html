@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>proyecto</title>
+</head>
+<body>
+<script>
+/*
+ * El taller donde vive el proyecto del alumno.
+ *
+ * Hace dos oficios con el mismo código, y por eso existe:
+ *   1. VISTA PREVIA — monta el HTML, el CSS y el JS y los deja funcionando,
+ *      con sus clics y todo, para que el alumno vea su resultado.
+ *   2. REVISIÓN — el mismo montaje, pero además le da los clics que pida la
+ *      misión y mide el resultado de verdad (texto, estilo calculado, posición).
+ *
+ * Va en un iframe con sandbox="allow-scripts" y sin allow-same-origin: origen
+ * opaco, no ve cookies ni localStorage ni la app que lo contiene.
+ *
+ * A propósito NO se tocan los márgenes que trae el navegador por defecto: la
+ * misión de centrar la tarjeta se mide sobre la página tal como es de verdad.
+ */
+(function () {
+  'use strict'
+
+  var LOGS = []
+  var MAX_LOGS = 200
+
+  function show(v) {
+    if (typeof v === 'string') return v
+    if (v === undefined) return 'undefined'
+    if (v === null) return 'null'
+    if (v instanceof Element) return '<' + v.tagName.toLowerCase() + '>'
+    try { return JSON.stringify(v) } catch (e) { return String(v) }
+  }
+
+  function capture() {
+    var p = []
+    for (var i = 0; i < arguments.length; i++) p.push(show(arguments[i]))
+    LOGS.push(p.join(' '))
+    if (LOGS.length > MAX_LOGS) {
+      throw new Error('Imprimiste mas de ' + MAX_LOGS + ' mensajes. Casi seguro hay un ciclo que no termina.')
+    }
+  }
+
+  console.log = capture
+  console.info = capture
+  console.warn = capture
+  console.error = capture
+
+  /* alert y prompt congelarían la página entera del alumno. */
+  window.alert = function (m) { LOGS.push(show(m)) }
+  window.confirm = function () { return true }
+  window.prompt = function (_q, def) { return def == null ? '' : String(def) }
+
+  function norm(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/\s+/g, ' ').trim()
+  }
+  function lower(s) { return norm(s).toLowerCase() }
+
+  /*
+   * Pasa el valor esperado por el mismo motor que produjo el valor real, para
+   * que "red", "#FF0000" y "rgb(255,0,0)" queden iguales antes de compararse.
+   */
+  function normStyle(prop, value) {
+    var probe = document.createElement('div')
+    probe.style.borderStyle = 'solid'
+    probe.style.setProperty(prop, value)
+    if (probe.style.getPropertyValue(prop) === '') return ''
+    document.body.appendChild(probe)
+    var out = ''
+    try { out = getComputedStyle(probe).getPropertyValue(prop).trim() } catch (e) { out = '' }
+    probe.parentNode.removeChild(probe)
+    return out
+  }
+
+  var SOLO_PX = /^-?\d*\.?\d+px$/
+
+  /* Chrome ajusta ciertas medidas a los píxeles físicos del monitor: 16px puede
+     reportarse como 15.66667px. Medio píxel de margen evita reprobar a alguien
+     por la pantalla que le tocó. */
+  function mismaMedida(a, b) {
+    if (!SOLO_PX.test(a) || !SOLO_PX.test(b)) return false
+    return Math.abs(parseFloat(a) - parseFloat(b)) < 0.5
+  }
+
+  function igualEstilo(prop, actual, esperado) {
+    if (actual === esperado) return true
+    var n = normStyle(prop, esperado)
+    if (n !== '' && actual === n) return true
+    return mismaMedida(actual, esperado) || mismaMedida(actual, n)
+  }
+
+  function estiloDe(el, prop) {
+    try { return getComputedStyle(el).getPropertyValue(prop).trim() } catch (e) { return '' }
+  }
+
+  function evalPrueba(p) {
+    var extra = ''
+    var ok = false
+    var els = []
+    try { els = [].slice.call(document.querySelectorAll(p.sel)) } catch (e) { els = [] }
+
+    if (p.t === 'existe') {
+      ok = els.length > 0
+
+    } else if (p.t === 'texto') {
+      for (var i = 0; i < els.length && !ok; i++) {
+        var v = norm(els[i].textContent)
+        if (p.eq !== undefined) ok = lower(v) === lower(p.eq)
+        else if (p.has !== undefined) ok = lower(v).indexOf(lower(p.has)) >= 0
+        else if (p.not !== undefined) ok = lower(v) !== lower(p.not)
+        else ok = v !== ''
+      }
+      if (!ok && els.length === 0) extra = ' (no encontré ' + p.sel + ')'
+      else if (!ok && els[0]) extra = ' (dice: “' + norm(els[0].textContent).slice(0, 40) + '”)'
+
+    } else if (p.t === 'estilo') {
+      if (els.length === 0) {
+        extra = ' (no encontré ' + p.sel + ')'
+      } else {
+        var actual = estiloDe(els[0], p.prop)
+        if (p.oneOf) {
+          for (var j = 0; j < p.oneOf.length && !ok; j++) ok = igualEstilo(p.prop, actual, p.oneOf[j])
+        } else {
+          ok = igualEstilo(p.prop, actual, p.eq)
+        }
+        if (!ok) extra = ' (tu valor: ' + (actual || 'nada') + ')'
+      }
+
+    } else if (p.t === 'centrado') {
+      if (els.length === 0) {
+        extra = ' (no encontré ' + p.sel + ')'
+      } else {
+        var r = els[0].getBoundingClientRect()
+        var ancho = document.documentElement.clientWidth
+        var izq = r.left
+        var der = ancho - r.right
+        ok = r.width > 0 && izq > 2 && der > 2 && Math.abs(izq - der) <= 4
+        if (!ok) extra = ' (te queda ' + Math.round(izq) + 'px a la izquierda y ' + Math.round(der) + 'px a la derecha)'
+      }
+    }
+
+    return { ok: ok, msg: p.msg + (ok ? '' : extra) }
+  }
+
+  function montar(job) {
+    document.body.innerHTML = job.html || ''
+    var st = document.createElement('style')
+    st.textContent = job.css || ''
+    document.body.appendChild(st)
+    /* new Function y no eval: el código del alumno corre en su propio ámbito,
+       así un const repetido entre corridas no lo revienta. */
+    new Function(job.js || '')()
+  }
+
+  function actuar(acciones) {
+    for (var i = 0; i < acciones.length; i++) {
+      var a = acciones[i]
+      var el = document.querySelector(a.sel)
+      if (!el) continue
+      var veces = a.veces || 1
+      for (var k = 0; k < veces; k++) {
+        if (a.t === 'clic') el.click()
+      }
+    }
+  }
+
+  /*
+   * Espera a que el iframe tenga ancho de verdad.
+   *
+   * Recién insertado en la página, el iframe todavía no ha recibido su primer
+   * pintado y por dentro mide cero: preguntarle ahí mismo por posiciones o
+   * tamaños devolvería ceros, y una misión como “centra la tarjeta” sería
+   * imposible de pasar. El rAF es el camino normal; el setTimeout es el plan B
+   * para cuando la pestaña está en segundo plano y el navegador no pinta.
+   */
+  function cuandoTengaAncho(cb) {
+    var intentos = 0
+
+    /* Un iframe recién insertado todavía no ha recibido su primer pintado y por
+       dentro mide cero: preguntarle ahí mismo por posiciones devolvería ceros y
+       una misión como “centra la tarjeta” sería imposible de pasar. Se sondea
+       con setTimeout y no con rAF porque el setTimeout también corre cuando la
+       pestaña está en segundo plano. Casi siempre sale a la primera. */
+    function mirar() {
+      intentos++
+      if (window.innerWidth > 0 || intentos > 20) { cb(); return }
+      setTimeout(mirar, 30)
+    }
+
+    mirar()
+  }
+
+  function run(job, listo) {
+    LOGS.length = 0
+    var error = null
+
+    try {
+      montar(job)
+    } catch (e) {
+      error = String(e && e.message ? e.message : e)
+    }
+
+    cuandoTengaAncho(function () {
+      if (!error && job.acciones && job.acciones.length) {
+        try { actuar(job.acciones) } catch (e2) {
+          error = 'Tu código falló al hacer clic: ' + String(e2 && e2.message ? e2.message : e2)
+        }
+      }
+
+      var resultados = []
+      var pruebas = job.pruebas || []
+      for (var i = 0; i < pruebas.length; i++) {
+        try { resultados.push(evalPrueba(pruebas[i])) }
+        catch (e3) { resultados.push({ ok: false, msg: pruebas[i].msg }) }
+      }
+
+      listo({
+        __pv: 'resultado',
+        id: job.id,
+        ok: !error && resultados.length > 0 && resultados.every(function (r) { return r.ok }),
+        resultados: resultados,
+        logs: LOGS.slice(0, 60),
+        error: error || undefined
+      })
+    })
+  }
+
+  /* Un error que estalla después, dentro de un clic del alumno, no lo ve el
+     try de arriba: lo recogemos aquí para poder mostrarlo en la consolita. */
+  window.addEventListener('error', function (ev) {
+    LOGS.push('⚠ ' + (ev.message || 'error'))
+  })
+
+  window.addEventListener('message', function (ev) {
+    var job = ev.data
+    if (!job || job.__pv !== 'run') return
+    try {
+      run(job, function (payload) { parent.postMessage(payload, '*') })
+    } catch (e) {
+      parent.postMessage(
+        { __pv: 'resultado', id: job.id, ok: false, resultados: [], logs: LOGS.slice(0, 60), error: String(e) },
+        '*'
+      )
+    }
+  })
+
+  parent.postMessage({ __pv: 'ready' }, '*')
+})()
+</script>
+</body>
+</html>

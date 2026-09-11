@@ -136,6 +136,20 @@ export default function Entrada() {
         ))}
       </section>
 
+      <section className="panel flex flex-wrap items-center justify-between gap-4 p-5">
+        <div>
+          <p className="etiqueta mb-1">Antes o después del examen</p>
+          <h2 className="text-sm font-bold text-[#e2e8ff]">🧩 Proyecto guiado 1 — La tarjeta que saluda</h2>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
+            Te damos un proyecto pequeño ya terminado: el HTML, el CSS, el JavaScript y el resultado funcionando. Lo
+            vuelves a escribir tú en tu propia terminal y después le haces seis cambios. No se puede copiar nada.
+          </p>
+        </div>
+        <a href="/proyecto" className="boton boton-primario">
+          Entrar al proyecto ▶
+        </a>
+      </section>
+
       <footer className="text-center text-xs text-[#4b5b80]">
         <a href="/profesor" className="hover:text-[#7f8fb3]">
           Entrada del profesor

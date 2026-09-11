@@ -42,7 +42,7 @@ interface Props {
   onPegadoBloqueado: () => void
 }
 
-const temaTerminal = EditorView.theme(
+export const temaTerminal = EditorView.theme(
   {
     '&': { color: '#d6e4ff', backgroundColor: 'transparent', height: '100%', fontSize: '14px' },
     '.cm-content': { fontFamily: 'var(--fuente-mono)', padding: '12px 0', caretColor: '#4ade80' },
@@ -69,7 +69,7 @@ const temaTerminal = EditorView.theme(
   { dark: true },
 )
 
-const coloresSintaxis = HighlightStyle.define([
+export const coloresSintaxis = HighlightStyle.define([
   { tag: [t.comment], color: '#4b5b80', fontStyle: 'italic' },
   { tag: [t.tagName], color: '#7dd3fc' },
   { tag: [t.attributeName, t.propertyName], color: '#c4b5fd' },
@@ -84,7 +84,7 @@ const coloresSintaxis = HighlightStyle.define([
   { tag: [t.invalid], color: '#fb7185' },
 ])
 
-function extensionDeLenguaje(lang: Lang) {
+export function extensionDeLenguaje(lang: Lang) {
   // autoCloseTags a propósito en false: cerrar la etiqueta sola le regalaría al
   // alumno justo lo que el reto le está pidiendo aprender.
   if (lang === 'html') return htmlLang({ autoCloseTags: false })

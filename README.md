@@ -23,17 +23,38 @@ Así de simple funciona ya: el progreso se guarda en el navegador de cada alumno
 que además sobreviva a cambiar de computador y para tener panel de profesor, hay que
 conectar Supabase (ver abajo).
 
-## Las tres pantallas
+## Las pantallas
 
 | Ruta | Para qué |
 |---|---|
 | `/` | El alumno escribe su nombre y entra. Ese nombre es su llave. |
 | `/examen` | El examen. Enunciado, terminal y resultado. |
+| `/proyecto` | Proyecto guiado 1: se ve el código terminado, se replica y se le hacen 6 cambios. |
 | `/profesor` | Panel del profesor. Pide la clave de `PROFESOR_CLAVE`. |
 | `/verificar` | Autodiagnóstico: corre las 75 soluciones de referencia contra sus propias pruebas. |
+| `/verificar-proyecto` | Autodiagnóstico del proyecto guiado: resuelve sus 6 misiones y las revisa. |
 
-`/verificar` vale la pena correrlo cada vez que se toque una pregunta: si algo sale en
-rojo, ese reto quedó imposible de resolver o su prueba no mide lo que dice.
+Las dos pantallas de `/verificar` valen la pena cada vez que se toque una pregunta o
+una misión: si algo sale en rojo, eso quedó imposible de resolver o su prueba no mide
+lo que dice.
+
+## El proyecto guiado
+
+`/proyecto` es lo más parecido a CodePen que hay aquí, con una diferencia: **el código
+del modelo no se puede seleccionar ni copiar**. A la izquierda el alumno ve el proyecto
+terminado —20 líneas o menos de HTML, de CSS y de JavaScript— y abajo el resultado
+funcionando, con su botón y todo. A la derecha tiene su propia terminal, la misma del
+examen, que rechaza cualquier pegado. La única forma de avanzar es teclearlo.
+
+Cuando lo replica, empiezan las misiones: ponle tu nombre, píntalo de rojo, centra la
+tarjeta, cambia el color del botón, haz que la sorpresa llegue a los 3 clics. Cada
+misión se revisa ejecutando el proyecto del alumno de verdad y midiendo el resultado
+(texto, estilo calculado, posición en la página, y clics de mentira sobre su botón).
+
+Los proyectos y sus misiones viven en `src/lib/proyectos.ts`; agregar uno nuevo es
+agregar otro objeto a ese archivo. Cada misión guarda además el cambio exacto que la
+resuelve (`parches`), y eso es lo que le permite a `/verificar-proyecto` comprobar que
+todas se pueden pasar.
 
 ## Cómo se califica
 
