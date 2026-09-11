@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ProyectoRunner, type ResultadoPrueba } from '@/lib/proyecto-runner'
-import { PROYECTO_1, aplicarParches } from '@/lib/proyectos'
+import { PROYECTOS, aplicarParches } from '@/lib/proyectos'
 
 /**
  * Autodiagnóstico del proyecto guiado, hermano de /verificar.
@@ -14,6 +14,7 @@ import { PROYECTO_1, aplicarParches } from '@/lib/proyectos'
  */
 interface Fila {
   id: string
+  proyecto: string
   titulo: string
   ok: boolean
   fallos: ResultadoPrueba[]
@@ -34,21 +35,27 @@ export default function VerificarProyecto() {
     const runner = new ProyectoRunner(caja.current)
 
     ;(async () => {
-      let codigo = { html: PROYECTO_1.html, css: PROYECTO_1.css, js: PROYECTO_1.js }
       const salida: Fila[] = []
 
-      for (const m of PROYECTO_1.misiones) {
-        codigo = aplicarParches(codigo, m.parches)
-        const s = await runner.correr({ ...codigo, acciones: m.acciones, pruebas: m.pruebas })
-        if (!vivo) return
-        salida.push({
-          id: m.id,
-          titulo: m.titulo,
-          ok: s.ok,
-          fallos: s.resultados.filter((r) => !r.ok),
-          error: s.error,
-        })
-        setFilas([...salida])
+      for (const p of PROYECTOS) {
+        // Los parches se acumulan: cada misión parte de la anterior ya resuelta,
+        // igual que le pasa al alumno.
+        let codigo = { html: p.html, css: p.css, js: p.js }
+
+        for (const m of p.misiones) {
+          codigo = aplicarParches(codigo, m.parches)
+          const s = await runner.correr({ ...codigo, acciones: m.acciones, pruebas: m.pruebas })
+          if (!vivo) return
+          salida.push({
+            id: `${p.id}-${m.id}`,
+            proyecto: `Proyecto ${p.numero} · ${p.titulo}`,
+            titulo: m.titulo,
+            ok: s.ok,
+            fallos: s.resultados.filter((r) => !r.ok),
+            error: s.error,
+          })
+          setFilas([...salida])
+        }
       }
       setCorriendo(false)
     })()
@@ -67,7 +74,8 @@ export default function VerificarProyecto() {
       <h1 className="text-2xl font-black">Autodiagnóstico del proyecto guiado</h1>
       <p className="mt-2 text-xs leading-relaxed text-[#8fa1c6]">
         Cada misión se resuelve con la llave de respuestas y se le corre su propia revisión. Todo en verde significa
-        que las {PROYECTO_1.misiones.length} misiones se pueden pasar de verdad.
+        que las {PROYECTOS.reduce((n, p) => n + p.misiones.length, 0)} misiones de los {PROYECTOS.length} proyectos
+        se pueden pasar de verdad.
       </p>
 
       <button
@@ -90,14 +98,17 @@ export default function VerificarProyecto() {
 
       <ul className="mt-5 space-y-2">
         {filas.map((f, i) => (
-          <li
-            key={f.id}
-            className={`rounded-xl border px-4 py-3 text-sm ${
-              f.ok ? 'border-[#166534] bg-[#0d2418] text-[#c9f7d8]' : 'border-[#7f1d3a] bg-[#2a0f1c] text-[#ffd7e2]'
-            }`}
-          >
+          <li key={f.id}>
+            {(i === 0 || filas[i - 1].proyecto !== f.proyecto) && (
+              <p className="etiqueta mb-2 mt-5">{f.proyecto}</p>
+            )}
+            <div
+              className={`rounded-xl border px-4 py-3 text-sm ${
+                f.ok ? 'border-[#166534] bg-[#0d2418] text-[#c9f7d8]' : 'border-[#7f1d3a] bg-[#2a0f1c] text-[#ffd7e2]'
+              }`}
+            >
             <p className="font-bold">
-              {f.ok ? '✓' : '✗'} {i + 1}. {f.titulo}
+              {f.ok ? '✓' : '✗'} {f.titulo}
             </p>
             {f.error && <p className="mt-1 text-xs">Error: {f.error}</p>}
             {f.fallos.map((r, k) => (
@@ -105,6 +116,7 @@ export default function VerificarProyecto() {
                 · {r.msg}
               </p>
             ))}
+            </div>
           </li>
         ))}
       </ul>

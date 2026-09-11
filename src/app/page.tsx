@@ -139,14 +139,16 @@ export default function Entrada() {
       <section className="panel flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="etiqueta mb-1">Antes o después del examen</p>
-          <h2 className="text-sm font-bold text-[#e2e8ff]">🧩 Proyecto guiado 1 — La tarjeta que saluda</h2>
+          <h2 className="text-sm font-bold text-[#e2e8ff]">🧩 Proyectos guiados</h2>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
             Te damos un proyecto pequeño ya terminado: el HTML, el CSS, el JavaScript y el resultado funcionando. Lo
-            vuelves a escribir tú en tu propia terminal y después le haces seis cambios. No se puede copiar nada.
+            vuelves a escribir tú en tu propia terminal y después le haces una lista de cambios. No se puede copiar
+            nada. Van del más sencillo —una tarjeta con un botón— al que ya tiene piezas móviles, como una lista de
+            tareas de verdad.
           </p>
         </div>
         <a href="/proyecto" className="boton boton-primario">
-          Entrar al proyecto ▶
+          Ver los proyectos ▶
         </a>
       </section>
 

@@ -29,7 +29,8 @@ conectar Supabase (ver abajo).
 |---|---|
 | `/` | El alumno escribe su nombre y entra. Ese nombre es su llave. |
 | `/examen` | El examen. Enunciado, terminal y resultado. |
-| `/proyecto` | Proyecto guiado 1: se ve el código terminado, se replica y se le hacen 6 cambios. |
+| `/proyecto` | Índice de los proyectos guiados, con el avance de cada uno. |
+| `/proyecto/p1`, `/proyecto/p2` | El taller: código del modelo, terminal del alumno y misiones. |
 | `/profesor` | Panel del profesor. Pide la clave de `PROFESOR_CLAVE`. |
 | `/verificar` | Autodiagnóstico: corre las 75 soluciones de referencia contra sus propias pruebas. |
 | `/verificar-proyecto` | Autodiagnóstico del proyecto guiado: resuelve sus 6 misiones y las revisa. |
@@ -38,23 +39,36 @@ Las dos pantallas de `/verificar` valen la pena cada vez que se toque una pregun
 una misión: si algo sale en rojo, eso quedó imposible de resolver o su prueba no mide
 lo que dice.
 
-## El proyecto guiado
+## Los proyectos guiados
 
-`/proyecto` es lo más parecido a CodePen que hay aquí, con una diferencia: **el código
-del modelo no se puede seleccionar ni copiar**. A la izquierda el alumno ve el proyecto
-terminado —20 líneas o menos de HTML, de CSS y de JavaScript— y abajo el resultado
-funcionando, con su botón y todo. A la derecha tiene su propia terminal, la misma del
-examen, que rechaza cualquier pegado. La única forma de avanzar es teclearlo.
+Es lo más parecido a CodePen que hay aquí, con una diferencia: **el código del modelo
+no se puede seleccionar ni copiar**. A la izquierda el alumno ve el proyecto terminado
+—alrededor de 20 líneas de HTML, de CSS y de JavaScript— y abajo el resultado
+funcionando, con sus botones y todo. A la derecha tiene su propia terminal, la misma
+del examen, que rechaza cualquier pegado. La única forma de avanzar es teclearlo.
 
-Cuando lo replica, empiezan las misiones: ponle tu nombre, píntalo de rojo, centra la
-tarjeta, cambia el color del botón, haz que la sorpresa llegue a los 3 clics. Cada
-misión se revisa ejecutando el proyecto del alumno de verdad y midiendo el resultado
-(texto, estilo calculado, posición en la página, y clics de mentira sobre su botón).
+Cuando lo replica, empiezan las misiones, y ahí es donde se aprende: son cambios
+pequeños que solo salen si entendió qué línea hace qué.
+
+| # | Proyecto | Qué enseña | Misiones |
+|---|---|---|---|
+| 1 | La tarjeta que saluda | Etiquetas, colores, centrar con `margin: auto`, un contador de clics | 6 |
+| 2 | La lista de tareas | Leer un `input`, crear elementos con JavaScript, flexbox, singular/plural, la tecla Enter | 7 |
+
+Cada misión se revisa **ejecutando el proyecto del alumno de verdad**: se monta en la
+ventanita, se usa como lo usaría una persona —escribir en el cuadro, dar clics,
+presionar Enter— y después se mide el resultado: texto, estilo calculado, cuántos
+elementos hay, qué quedó escrito en un input, si la caja está centrada.
+
+Esa revisión corre en la misma ventana donde el alumno ve su resultado, y no en un
+iframe escondido: Chrome no le da maquetación a un iframe invisible o fuera de la
+pantalla, y ahí toda medida da cero. De paso, el alumno ve los clics que le dio la
+revisión.
 
 Los proyectos y sus misiones viven en `src/lib/proyectos.ts`; agregar uno nuevo es
-agregar otro objeto a ese archivo. Cada misión guarda además el cambio exacto que la
-resuelve (`parches`), y eso es lo que le permite a `/verificar-proyecto` comprobar que
-todas se pueden pasar.
+agregar otro objeto a ese archivo (la ruta `/proyecto/<id>` y el índice se arman
+solos). Cada misión guarda además el cambio exacto que la resuelve (`parches`), y eso
+es lo que le permite a `/verificar-proyecto` comprobar que todas se pueden pasar.
 
 ## Cómo se califica
 

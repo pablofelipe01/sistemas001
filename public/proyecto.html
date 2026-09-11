@@ -116,6 +116,31 @@
       if (!ok && els.length === 0) extra = ' (no encontré ' + p.sel + ')'
       else if (!ok && els[0]) extra = ' (dice: “' + norm(els[0].textContent).slice(0, 40) + '”)'
 
+    } else if (p.t === 'conteo') {
+      ok = els.length === p.eq
+      if (!ok) extra = ' (encontré ' + els.length + ')'
+
+    } else if (p.t === 'valor') {
+      if (els.length === 0) {
+        extra = ' (no encontré ' + p.sel + ')'
+      } else {
+        var val = els[0].value === undefined || els[0].value === null ? '' : String(els[0].value)
+        ok = norm(val) === norm(p.eq)
+        if (!ok) extra = ' (dice: “' + val.slice(0, 40) + '”)'
+      }
+
+    } else if (p.t === 'atributo') {
+      for (var a = 0; a < els.length && !ok; a++) {
+        var attr = els[a].getAttribute(p.name)
+        if (attr === null) continue
+        if (p.eq !== undefined) ok = lower(attr) === lower(p.eq)
+        else if (p.has !== undefined) ok = lower(attr).indexOf(lower(p.has)) >= 0
+        else ok = norm(attr) !== ''
+      }
+      if (!ok && els.length === 0) extra = ' (no encontré ' + p.sel + ')'
+      else if (!ok && els[0] && els[0].getAttribute(p.name) === null) extra = ' (no tiene el atributo ' + p.name + ')'
+      else if (!ok && els[0]) extra = ' (dice: “' + String(els[0].getAttribute(p.name)).slice(0, 40) + '”)'
+
     } else if (p.t === 'estilo') {
       if (els.length === 0) {
         extra = ' (no encontré ' + p.sel + ')'
@@ -123,8 +148,14 @@
         var actual = estiloDe(els[0], p.prop)
         if (p.oneOf) {
           for (var j = 0; j < p.oneOf.length && !ok; j++) ok = igualEstilo(p.prop, actual, p.oneOf[j])
-        } else {
+        } else if (p.has !== undefined) {
+          ok = actual.toLowerCase().indexOf(String(p.has).toLowerCase()) >= 0
+        } else if (p.eq !== undefined) {
           ok = igualEstilo(p.prop, actual, p.eq)
+        } else {
+          /* Sin valor esperado: basta con que la propiedad tenga algo de verdad.
+             Así se puede pedir “ponle una sombra” sin exigir una sombra exacta. */
+          ok = actual !== '' && actual !== 'none' && actual !== '0px' && actual !== 'normal'
         }
         if (!ok) extra = ' (tu valor: ' + (actual || 'nada') + ')'
       }
@@ -155,14 +186,34 @@
     new Function(job.js || '')()
   }
 
+  /*
+   * Usa la página del alumno como la usaría una persona: escribe en el cuadro,
+   * da clics, presiona teclas. Nada de leer su código: si funciona, funciona.
+   */
   function actuar(acciones) {
     for (var i = 0; i < acciones.length; i++) {
       var a = acciones[i]
       var el = document.querySelector(a.sel)
       if (!el) continue
-      var veces = a.veces || 1
-      for (var k = 0; k < veces; k++) {
-        if (a.t === 'clic') el.click()
+
+      if (a.t === 'clic') {
+        var veces = a.veces || 1
+        for (var k = 0; k < veces; k++) el.click()
+
+      } else if (a.t === 'escribir') {
+        el.value = a.texto
+        /* El evento input es el que escucharía un alumno que valide mientras se
+           escribe; sin él, su código no se enteraría de que el cuadro cambió. */
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+        el.dispatchEvent(new Event('change', { bubbles: true }))
+
+      } else if (a.t === 'tecla') {
+        /* Los tres eventos, porque no sabemos con cuál decidió escuchar el
+           alumno. Si escucha dos, su propio if de “texto vacío” evita el doble. */
+        var tipos = ['keydown', 'keypress', 'keyup']
+        for (var t = 0; t < tipos.length; t++) {
+          el.dispatchEvent(new KeyboardEvent(tipos[t], { key: a.key, bubbles: true, cancelable: true }))
+        }
       }
     }
   }
