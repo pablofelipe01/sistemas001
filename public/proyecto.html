@@ -49,6 +49,119 @@
   console.warn = capture
   console.error = capture
 
+  /*
+   * Lo que el alumno deja vivo entre una corrida y otra.
+   *
+   * El iframe se reutiliza, así que un setInterval o un document.addEventListener
+   * de la corrida anterior seguirían funcionando encima de la página nueva.
+   * Por eso se anotan todos y se barren al montar.
+   */
+  var nativo = {
+    setTimeout: window.setTimeout.bind(window),
+    clearTimeout: window.clearTimeout.bind(window),
+    setInterval: window.setInterval.bind(window),
+    clearInterval: window.clearInterval.bind(window)
+  }
+  var agregarOyente = EventTarget.prototype.addEventListener
+  var quitarOyente = EventTarget.prototype.removeEventListener
+
+  var OYENTES = []
+  ;[document, window].forEach(function (blanco) {
+    blanco.addEventListener = function (tipo, fn, opciones) {
+      OYENTES.push([blanco, tipo, fn, opciones])
+      return agregarOyente.call(blanco, tipo, fn, opciones)
+    }
+  })
+
+  var PROPIEDADES_ON = ['onkeydown', 'onkeyup', 'onkeypress', 'onclick', 'oninput', 'onchange']
+
+  function barrerOyentes() {
+    for (var i = 0; i < OYENTES.length; i++) {
+      var o = OYENTES[i]
+      quitarOyente.call(o[0], o[1], o[2], o[3])
+    }
+    OYENTES.length = 0
+    for (var k = 0; k < PROPIEDADES_ON.length; k++) {
+      document[PROPIEDADES_ON[k]] = null
+      window[PROPIEDADES_ON[k]] = null
+    }
+  }
+
+  /*
+   * El reloj.
+   *
+   * En la vista previa los temporizadores son de verdad: el cronómetro corre.
+   * En la revisión son de mentira: nada pasa solo, y la acción “esperar” adelanta
+   * el tiempo de golpe, disparando en orden lo que tocaba. Así “espera 2 segundos”
+   * no hace esperar a nadie y da siempre el mismo resultado.
+   */
+  var RELOJ = { virtual: false, ahora: 0, cola: [], siguiente: 1, reales: {} }
+
+  function programar(fn, ms, repetir, args) {
+    if (typeof fn !== 'function') return 0
+    ms = Math.max(0, Number(ms) || 0)
+    var id = RELOJ.siguiente++
+    if (RELOJ.virtual) {
+      RELOJ.cola.push({ id: id, cuando: RELOJ.ahora + ms, cada: repetir ? Math.max(1, ms) : 0, fn: fn, args: args })
+    } else {
+      var llamar = function () {
+        if (!repetir) delete RELOJ.reales[id]
+        fn.apply(window, args)
+      }
+      RELOJ.reales[id] = {
+        repetir: repetir,
+        h: repetir ? nativo.setInterval(llamar, ms) : nativo.setTimeout(llamar, ms)
+      }
+    }
+    return id
+  }
+
+  function cancelar(id) {
+    RELOJ.cola = RELOJ.cola.filter(function (t) { return t.id !== id })
+    var r = RELOJ.reales[id]
+    if (r) {
+      if (r.repetir) nativo.clearInterval(r.h)
+      else nativo.clearTimeout(r.h)
+      delete RELOJ.reales[id]
+    }
+  }
+
+  window.setTimeout = function (fn, ms) { return programar(fn, ms, false, [].slice.call(arguments, 2)) }
+  window.setInterval = function (fn, ms) { return programar(fn, ms, true, [].slice.call(arguments, 2)) }
+  window.clearTimeout = cancelar
+  window.clearInterval = cancelar
+
+  function reiniciarReloj(virtual) {
+    for (var id in RELOJ.reales) cancelar(Number(id))
+    RELOJ.cola = []
+    RELOJ.ahora = 0
+    RELOJ.virtual = virtual
+  }
+
+  /* Adelanta el reloj de mentira y dispara, en orden, todo lo que vencía. */
+  function avanzar(ms) {
+    var meta = RELOJ.ahora + Math.max(0, Number(ms) || 0)
+    var disparos = 0
+    for (;;) {
+      var prox = null
+      for (var i = 0; i < RELOJ.cola.length; i++) {
+        var t = RELOJ.cola[i]
+        if (t.cuando <= meta && (!prox || t.cuando < prox.cuando)) prox = t
+      }
+      if (!prox) break
+      if (++disparos > 100000) {
+        throw new Error('Tus temporizadores se dispararon demasiadas veces: ¿un setInterval de 0 milisegundos?')
+      }
+      RELOJ.ahora = prox.cuando
+      if (prox.cada) prox.cuando += prox.cada
+      else RELOJ.cola.splice(RELOJ.cola.indexOf(prox), 1)
+      try { prox.fn.apply(window, prox.args) } catch (e) {
+        LOGS.push('⚠ ' + String(e && e.message ? e.message : e))
+      }
+    }
+    RELOJ.ahora = meta
+  }
+
   /* alert y prompt congelarían la página entera del alumno. */
   window.alert = function (m) { LOGS.push(show(m)) }
   window.confirm = function () { return true }
@@ -186,6 +299,9 @@
   }
 
   function montar(job) {
+    barrerOyentes()
+    /* Con pruebas es revisión: reloj de mentira. Sin pruebas es vista previa. */
+    reiniciarReloj((job.pruebas || []).length > 0)
     document.body.innerHTML = job.html || ''
     var st = document.createElement('style')
     st.textContent = job.css || ''
@@ -202,6 +318,12 @@
   function actuar(acciones) {
     for (var i = 0; i < acciones.length; i++) {
       var a = acciones[i]
+
+      if (a.t === 'esperar') {
+        avanzar(a.ms)
+        continue
+      }
+
       var el = document.querySelector(a.sel)
       if (!el) continue
 
@@ -247,7 +369,7 @@
     function mirar() {
       intentos++
       if (window.innerWidth > 0 || intentos > 20) { cb(); return }
-      setTimeout(mirar, 30)
+      nativo.setTimeout(mirar, 30)
     }
 
     mirar()
@@ -290,11 +412,11 @@
 
   /* Un error que estalla después, dentro de un clic del alumno, no lo ve el
      try de arriba: lo recogemos aquí para poder mostrarlo en la consolita. */
-  window.addEventListener('error', function (ev) {
+  agregarOyente.call(window, 'error', function (ev) {
     LOGS.push('⚠ ' + (ev.message || 'error'))
   })
 
-  window.addEventListener('message', function (ev) {
+  agregarOyente.call(window, 'message', function (ev) {
     var job = ev.data
     if (!job || job.__pv !== 'run') return
     try {

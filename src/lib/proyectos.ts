@@ -25,6 +25,11 @@ export type Accion =
   | { t: 'escribir'; sel: string; texto: string }
   /** Presiona una tecla sobre un elemento (keydown, keypress y keyup). */
   | { t: 'tecla'; sel: string; key: string }
+  /**
+   * Deja pasar tiempo. En la revisión los temporizadores son de mentira: esto
+   * adelanta el reloj de golpe y dispara los setTimeout y setInterval que tocaban.
+   */
+  | { t: 'esperar'; ms: number }
 
 export type PruebaProyecto =
   /** Existe al menos un elemento con ese selector. */
@@ -1282,7 +1287,885 @@ export const PROYECTO_5: Proyecto = {
   ],
 }
 
-export const PROYECTOS: Proyecto[] = [PROYECTO_1, PROYECTO_2, PROYECTO_3, PROYECTO_4, PROYECTO_5]
+/* ========================================================================== */
+/* Proyecto 6 — el tiempo entra en juego: setInterval y clearInterval, un     */
+/* estado que dice si corre o no, formato con padStart, botones que se        */
+/* desactivan y un atajo de teclado para toda la página.                      */
+/* ========================================================================== */
+
+const HTML_6 = `<div class="reloj">
+  <p id="pantalla">00:00.0</p>
+  <div class="botones">
+    <button id="iniciar">Iniciar</button>
+    <button id="vuelta" disabled>Vuelta</button>
+    <button id="reiniciar">Reiniciar</button>
+  </div>
+  <ol id="vueltas"></ol>
+</div>`
+
+const CSS_6 = `body {
+  background: #18181b;
+  font-family: Arial, sans-serif;
+}
+.reloj {
+  max-width: 320px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #27272a;
+  color: #fafafa;
+  border-radius: 16px;
+  text-align: center;
+}
+#pantalla {
+  margin: 0 0 16px;
+  font-family: "Courier New", monospace;
+  font-size: 48px;
+}
+.botones {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+button {
+  padding: 8px 14px;
+  background: #22c55e;
+  color: #052e16;
+  border: none;
+  border-radius: 999px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+#vueltas {
+  text-align: left;
+}`
+
+const JS_6 = `const pantalla = document.getElementById("pantalla");
+const iniciar = document.getElementById("iniciar");
+const vuelta = document.getElementById("vuelta");
+const reiniciar = document.getElementById("reiniciar");
+const vueltas = document.getElementById("vueltas");
+
+let decimas = 0;
+let intervalo = null;
+
+function formato(d) {
+  const minutos = Math.floor(d / 600);
+  const segundos = Math.floor(d / 10) % 60;
+  const decima = d % 10;
+  return String(minutos).padStart(2, "0") + ":" + String(segundos).padStart(2, "0") + "." + decima;
+}
+
+function pintar() {
+  pantalla.textContent = formato(decimas);
+}
+
+iniciar.addEventListener("click", function () {
+  if (intervalo === null) {
+    intervalo = setInterval(function () {
+      decimas++;
+      pintar();
+    }, 100);
+    iniciar.textContent = "Pausar";
+    vuelta.disabled = false;
+  } else {
+    clearInterval(intervalo);
+    intervalo = null;
+    iniciar.textContent = "Seguir";
+    vuelta.disabled = true;
+  }
+});
+
+vuelta.addEventListener("click", function () {
+  const item = document.createElement("li");
+  item.textContent = formato(decimas);
+  vueltas.appendChild(item);
+});
+
+reiniciar.addEventListener("click", function () {
+  clearInterval(intervalo);
+  intervalo = null;
+  decimas = 0;
+  pintar();
+  vueltas.innerHTML = "";
+  iniciar.textContent = "Iniciar";
+  vuelta.disabled = true;
+});`
+
+const esperar = (ms: number): Accion => ({ t: 'esperar', ms })
+const clic = (sel: string): Accion => ({ t: 'clic', sel })
+
+export const PROYECTO_6: Proyecto = {
+  id: 'p6',
+  numero: 6,
+  titulo: 'El cronómetro',
+  nivel: 'Avanzado',
+  lema: 'Proyecto 6 · El tiempo entra en juego: setInterval, clearInterval y un estado que manda',
+  descripcion:
+    'Un cronómetro con décimas, pausa, vueltas y reinicio. Aquí el JavaScript ya no solo reacciona a clics: se programa para hacer algo cada 100 milisegundos, lo detiene cuando toca y recuerda en qué estado está. Tus misiones le agregan la duración de cada vuelta, un atajo con la barra espaciadora y la vuelta récord.',
+  html: HTML_6,
+  css: CSS_6,
+  js: JS_6,
+  misiones: [
+    {
+      id: 'm1',
+      titulo: 'Réplica exacta',
+      enunciado:
+        'Escribe los tres archivos hasta que tu cronómetro funcione igual que el modelo: inicia, marca vueltas, se pausa y los minutos pasan bien de 59 segundos a 01:00.0.',
+      pista:
+        'La parte fina es formato: una décima es una vuelta del setInterval, 10 décimas son un segundo y 600 son un minuto. El % 60 hace que los segundos vuelvan a 0 al llegar a 60, y padStart(2, "0") pone el cero de adelante. La revisión no espera de verdad: adelanta el reloj de golpe.',
+      parches: [],
+      acciones: [clic('#iniciar'), esperar(61500), clic('#vuelta'), esperar(1000), clic('#iniciar'), esperar(3000)],
+      pruebas: [
+        { t: 'texto', sel: '#pantalla', eq: '01:02.5', msg: 'Corrí el cronómetro 62 segundos y medio y lo pausé: la pantalla debería decir 01:02.5' },
+        { t: 'texto', sel: '#iniciar', eq: 'Seguir', msg: 'Con el cronómetro en pausa, el primer botón debería decir: Seguir' },
+        { t: 'existe', sel: '#vuelta:disabled', msg: 'En pausa, el botón Vuelta tiene que quedar desactivado (disabled)' },
+        { t: 'conteo', sel: '#vueltas li', eq: 1, msg: 'Marqué una sola vuelta: debería haber un li en la lista' },
+        { t: 'texto', sel: '#vueltas li', eq: '01:01.5', msg: 'La vuelta la marqué en 01:01.5' },
+        { t: 'texto', sel: '#reiniciar', eq: 'Reiniciar', msg: 'Falta el botón con id="reiniciar" que dice: Reiniciar' },
+        { t: 'estilo', sel: 'body', prop: 'background-color', eq: '#18181b', msg: 'El fondo de la página debe ser #18181b' },
+        { t: 'estilo', sel: '.reloj', prop: 'border-radius', eq: '16px', msg: 'Al reloj le faltan las esquinas de 16px' },
+        { t: 'estilo', sel: '#pantalla', prop: 'font-size', eq: '48px', msg: 'La pantalla debe tener letra de 48px' },
+        { t: 'estilo', sel: '.botones', prop: 'display', eq: 'flex', msg: 'Los botones necesitan display: flex' },
+        { t: 'estilo', sel: '#iniciar', prop: 'border-radius', eq: '999px', msg: 'Los botones deben ser redondos: border-radius: 999px' },
+        { t: 'estilo', sel: '#vuelta', prop: 'opacity', eq: '0.4', msg: 'Un botón desactivado se ve apagado: opacity: 0.4' },
+      ],
+    },
+    {
+      id: 'm2',
+      titulo: 'Pantalla de reloj digital',
+      enunciado: 'Haz que los números de la pantalla se vean verdes, #4ade80, y un poco más separados entre sí: 2px.',
+      pista: 'En la regla #pantalla agrega color y letter-spacing, que es la propiedad que separa las letras.',
+      parches: [{ lang: 'css', de: '  font-size: 48px;\n}', a: '  font-size: 48px;\n  color: #4ade80;\n  letter-spacing: 2px;\n}' }],
+      pruebas: [
+        { t: 'estilo', sel: '#pantalla', prop: 'color', eq: '#4ade80', msg: 'La pantalla todavía no es #4ade80' },
+        { t: 'estilo', sel: '#pantalla', prop: 'letter-spacing', eq: '2px', msg: 'A la pantalla le falta letter-spacing: 2px' },
+      ],
+    },
+    {
+      id: 'm3',
+      titulo: 'Reiniciar da miedo',
+      enunciado: 'Reiniciar borra todo, así que debe verse distinto: fondo rojo #ef4444 y letra blanca. Los otros botones se quedan verdes.',
+      pista:
+        'Crea una regla #reiniciar. Aunque venga antes o después, un selector con # le gana a la regla button, porque es más específico.',
+      parches: [{ lang: 'css', de: '#vueltas {', a: '#reiniciar {\n  background: #ef4444;\n  color: #ffffff;\n}\n#vueltas {' }],
+      pruebas: [
+        { t: 'estilo', sel: '#reiniciar', prop: 'background-color', eq: '#ef4444', msg: 'El botón Reiniciar todavía no es #ef4444' },
+        { t: 'estilo', sel: '#reiniciar', prop: 'color', eq: '#ffffff', msg: 'La letra de Reiniciar debe ser blanca' },
+        { t: 'estilo', sel: '#iniciar', prop: 'background-color', eq: '#22c55e', msg: 'El botón Iniciar se tiene que quedar verde' },
+      ],
+    },
+    {
+      id: 'm4',
+      titulo: 'La última, arriba',
+      enunciado: 'Cuando hay muchas vueltas, la última queda perdida al fondo. Haz que cada vuelta nueva aparezca de primera en la lista.',
+      pista: 'appendChild pone al final. Su hermano prepend pone al principio.',
+      parches: [{ lang: 'js', de: '  vueltas.appendChild(item);', a: '  vueltas.prepend(item);' }],
+      acciones: [clic('#iniciar'), esperar(1000), clic('#vuelta'), esperar(1000), clic('#vuelta')],
+      pruebas: [
+        { t: 'conteo', sel: '#vueltas li', eq: 2, msg: 'Marqué dos vueltas: debería haber dos' },
+        { t: 'texto', sel: '#vueltas li:nth-child(1)', eq: '00:02.0', msg: 'La primera de la lista debería ser la más nueva: 00:02.0' },
+        { t: 'texto', sel: '#vueltas li:nth-child(2)', eq: '00:01.0', msg: 'La segunda de la lista debería ser la más vieja: 00:01.0' },
+      ],
+    },
+    {
+      id: 'm5',
+      titulo: '¿Cuánto duró la vuelta?',
+      enunciado:
+        'Al lado de cada vuelta, entre paréntesis, muestra cuánto duró desde la anterior: “00:02.5 (+00:01.5)”. Ojo: al reiniciar, la cuenta de la vuelta anterior también vuelve a cero.',
+      pista:
+        'Necesitas recordar en qué décima se marcó la vuelta anterior: una variable let ultima = 0; al lado de decimas. La duración es decimas - ultima, y la puedes pasar por formato igual que el tiempo. Después de escribirla, ultima = decimas. Y en reiniciar, ultima = 0.',
+      parches: [
+        { lang: 'js', de: 'let intervalo = null;', a: 'let intervalo = null;\nlet ultima = 0;' },
+        {
+          lang: 'js',
+          de: '  item.textContent = formato(decimas);',
+          a: '  item.textContent = formato(decimas) + " (+" + formato(decimas - ultima) + ")";\n  ultima = decimas;',
+        },
+        { lang: 'js', de: '  decimas = 0;', a: '  decimas = 0;\n  ultima = 0;' },
+      ],
+      acciones: [
+        clic('#iniciar'), esperar(1000), clic('#vuelta'), esperar(1500), clic('#vuelta'),
+        clic('#reiniciar'), clic('#iniciar'), esperar(700), clic('#vuelta'),
+      ],
+      pruebas: [
+        { t: 'conteo', sel: '#vueltas li', eq: 1, msg: 'Después de reiniciar marqué una sola vuelta: debería haber una' },
+        { t: 'texto', sel: '#vueltas li', eq: '00:00.7 (+00:00.7)', msg: 'Reinicié y marqué a las 7 décimas: debería decir 00:00.7 (+00:00.7). ¿Volviste ultima a 0 al reiniciar?' },
+      ],
+    },
+    {
+      id: 'm6',
+      titulo: 'Con la barra espaciadora',
+      enunciado:
+        'Que la barra espaciadora haga lo mismo que el primer botón: si el cronómetro está quieto, arranca; si está corriendo, se pausa. Debe funcionar en toda la página, no solo sobre un botón.',
+      pista:
+        'Escucha keydown en document, que es la página entera. Si e.key es " " (un espacio), llama iniciar.click(): así no repites la lógica. Pon también e.preventDefault(), para que el espacio no haga bajar la página.',
+      parches: [
+        {
+          lang: 'js',
+          de: '  vuelta.disabled = true;\n});',
+          a: '  vuelta.disabled = true;\n});\n\ndocument.addEventListener("keydown", function (e) {\n  if (e.key === " ") {\n    e.preventDefault();\n    iniciar.click();\n  }\n});',
+        },
+      ],
+      acciones: [{ t: 'tecla', sel: 'body', key: ' ' }, esperar(1000), { t: 'tecla', sel: 'body', key: ' ' }, esperar(2000)],
+      pruebas: [
+        { t: 'texto', sel: '#pantalla', eq: '00:01.0', msg: 'Espacio, un segundo, espacio otra vez: el cronómetro debería quedar pausado en 00:01.0' },
+        { t: 'texto', sel: '#iniciar', eq: 'Seguir', msg: 'Después del segundo espacio, el botón debería decir: Seguir' },
+      ],
+    },
+    {
+      id: 'm7',
+      titulo: 'La vuelta récord',
+      enunciado:
+        'Pinta de verde #4ade80 la vuelta que menos duró, dándole la clase record. Si después llega una más rápida, la récord cambia: solo una lleva la clase a la vez.',
+      pista:
+        'Guarda la duración en cada li: item.dataset.duracion = decimas - ultima; Después de agregarla, recorre todas con [...vueltas.children], saca la menor con Math.min(...) y usa classList.toggle("record", condición) en cada una: la pone si la condición es verdad y la quita si no.',
+      parches: [
+        { lang: 'js', de: '  ultima = decimas;', a: '  item.dataset.duracion = decimas - ultima;\n  ultima = decimas;' },
+        { lang: 'js', de: '  vueltas.prepend(item);', a: '  vueltas.prepend(item);\n  marcarRecord();' },
+        {
+          lang: 'js',
+          de: 'function pintar() {',
+          a: 'function marcarRecord() {\n  const items = [...vueltas.children];\n  const mejor = Math.min(...items.map((li) => Number(li.dataset.duracion)));\n  items.forEach((li) => {\n    li.classList.toggle("record", Number(li.dataset.duracion) === mejor);\n  });\n}\n\nfunction pintar() {',
+        },
+        { lang: 'css', de: '#vueltas {\n  text-align: left;\n}', a: '#vueltas {\n  text-align: left;\n}\n.record {\n  color: #4ade80;\n}' },
+      ],
+      acciones: [clic('#iniciar'), esperar(2000), clic('#vuelta'), esperar(800), clic('#vuelta'), esperar(1500), clic('#vuelta')],
+      pruebas: [
+        { t: 'clase', sel: '#vueltas li:nth-child(2)', name: 'record', msg: 'Las vueltas duraron 2 s, 0.8 s y 1.5 s: la de 0.8 s (la segunda de la lista) debería llevar la clase record' },
+        { t: 'clase', sel: '#vueltas li:nth-child(1)', name: 'record', tiene: false, msg: 'La vuelta de 1.5 s no es récord: no debería llevar la clase record' },
+        { t: 'clase', sel: '#vueltas li:nth-child(3)', name: 'record', tiene: false, msg: 'La vuelta de 2 s dejó de ser récord: hay que quitarle la clase' },
+        { t: 'estilo', sel: '#vueltas li:nth-child(2)', prop: 'color', eq: '#4ade80', msg: 'La vuelta récord debería verse verde #4ade80' },
+      ],
+    },
+  ],
+}
+
+/* ========================================================================== */
+/* Proyecto 7 — un algoritmo de verdad: el tablero es un arreglo, las líneas  */
+/* ganadoras otro, y find, every y includes deciden quién ganó.               */
+/* ========================================================================== */
+
+const HTML_7 = `<div class="juego">
+  <h2 id="estado">Turno de X</h2>
+  <div id="tablero"></div>
+  <button id="nueva">Nueva partida</button>
+</div>`
+
+const CSS_7 = `body {
+  background: #0c4a6e;
+  font-family: Arial, sans-serif;
+}
+.juego {
+  width: fit-content;
+  margin: 16px auto;
+  color: #ffffff;
+  text-align: center;
+}
+#estado {
+  margin: 0 0 10px;
+}
+#tablero {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 6px;
+}
+.casilla {
+  height: 60px;
+  background: #e0f2fe;
+  color: #0c4a6e;
+  border: none;
+  border-radius: 8px;
+  font-size: 32px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.gana {
+  background: #fde047;
+}
+#nueva {
+  margin-top: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+}`
+
+const JS_7 = `const LINEAS = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6]
+];
+
+const tablero = document.getElementById("tablero");
+const estado = document.getElementById("estado");
+
+let casillas = Array(9).fill("");
+let turno = "X";
+let terminado = false;
+let ganadora = [];
+
+function pintar() {
+  tablero.innerHTML = "";
+  casillas.forEach((valor, i) => {
+    const boton = document.createElement("button");
+    boton.className = "casilla";
+    boton.dataset.i = i;
+    boton.textContent = valor;
+    if (ganadora.includes(i)) {
+      boton.classList.add("gana");
+    }
+    tablero.appendChild(boton);
+  });
+}
+
+function buscarGanador() {
+  return LINEAS.find((linea) => {
+    const [a, b, c] = linea;
+    return casillas[a] !== "" && casillas[a] === casillas[b] && casillas[a] === casillas[c];
+  });
+}
+
+tablero.addEventListener("click", (e) => {
+  const i = e.target.dataset.i;
+  if (i === undefined || terminado || casillas[i] !== "") return;
+
+  casillas[i] = turno;
+  const linea = buscarGanador();
+
+  if (linea) {
+    ganadora = linea;
+    terminado = true;
+    estado.textContent = "¡Ganó " + turno + "!";
+  } else if (casillas.every((valor) => valor !== "")) {
+    terminado = true;
+    estado.textContent = "Empate";
+  } else {
+    turno = turno === "X" ? "O" : "X";
+    estado.textContent = "Turno de " + turno;
+  }
+  pintar();
+});
+
+document.getElementById("nueva").addEventListener("click", () => {
+  casillas = Array(9).fill("");
+  turno = "X";
+  terminado = false;
+  ganadora = [];
+  estado.textContent = "Turno de X";
+  pintar();
+});
+
+pintar();`
+
+/** Clic en la casilla número n, de 0 (arriba a la izquierda) a 8 (abajo a la derecha). */
+const casilla = (n: number): Accion => clic(`#tablero [data-i="${n}"]`)
+const jugadas = (...ns: number[]) => ns.map(casilla)
+
+/** X hace la fila de arriba: 0, 1, 2. */
+const GANA_X = jugadas(0, 3, 1, 4, 2)
+/** Nueve jugadas sin ninguna línea. */
+const EMPATE = jugadas(0, 1, 2, 4, 3, 5, 7, 6, 8)
+
+export const PROYECTO_7: Proyecto = {
+  id: 'p7',
+  numero: 7,
+  titulo: 'Tres en raya',
+  nivel: 'Muy avanzado',
+  lema: 'Proyecto 7 · Un algoritmo de verdad: el tablero es un arreglo y find, every e includes deciden',
+  descripcion:
+    'El triqui de toda la vida: X contra O, resalta la línea ganadora, detecta el empate y deja jugar otra. El tablero entero es un arreglo de nueve casillas, y ganar es encontrar, entre las ocho líneas posibles, una con las tres iguales. Tus misiones le suman marcador, deshacer y una pista que busca la jugada ganadora.',
+  html: HTML_7,
+  css: CSS_7,
+  js: JS_7,
+  misiones: [
+    {
+      id: 'm1',
+      titulo: 'Réplica exacta',
+      enunciado:
+        'Escribe los tres archivos hasta que tu tres en raya funcione igual que el modelo: los turnos se alternan, se detecta quién gana, se resalta la línea y ya no se puede jugar después de ganar.',
+      pista:
+        'LINEAS es un arreglo de arreglos: cada uno son las tres posiciones de una línea. En buscarGanador, const [a, b, c] = linea saca las tres de una vez. La condición turno === "X" ? "O" : "X" es un if cortico: si es X, pasa a O; si no, a X.',
+      parches: [],
+      acciones: [...GANA_X, casilla(5)],
+      pruebas: [
+        { t: 'conteo', sel: '#tablero .casilla', eq: 9, msg: 'El tablero debería tener 9 casillas con class="casilla"' },
+        { t: 'texto', sel: '#estado', eq: '¡Ganó X!', msg: 'X hizo la fila de arriba: el estado debería decir ¡Ganó X!' },
+        { t: 'conteo', sel: '.casilla.gana', eq: 3, msg: 'Las tres casillas de la línea ganadora deberían llevar la clase gana' },
+        { t: 'texto', sel: '#tablero [data-i="3"]', eq: 'O', msg: 'La casilla 3 la jugó O' },
+        { t: 'texto', sel: '#tablero [data-i="5"]', eq: '', msg: 'Después de ganar, hice clic en la casilla 5 y se llenó: el juego tiene que quedar quieto' },
+        { t: 'texto', sel: '#nueva', eq: 'Nueva partida', msg: 'Falta el botón con id="nueva" que dice: Nueva partida' },
+        { t: 'estilo', sel: 'body', prop: 'background-color', eq: '#0c4a6e', msg: 'El fondo de la página debe ser #0c4a6e' },
+        { t: 'estilo', sel: '#tablero', prop: 'display', eq: 'grid', msg: 'El tablero necesita display: grid' },
+        { t: 'estilo', sel: '#tablero', prop: 'column-gap', eq: '6px', msg: 'Al tablero le falta el gap: 6px' },
+        { t: 'estilo', sel: '.casilla', prop: 'border-radius', eq: '8px', msg: 'Las casillas llevan esquinas de 8px' },
+        { t: 'estilo', sel: '.casilla.gana', prop: 'background-color', eq: '#fde047', msg: 'Las casillas ganadoras deben verse amarillas: #fde047' },
+      ],
+    },
+    {
+      id: 'm2',
+      titulo: 'La O de otro color',
+      enunciado: 'Cuesta distinguir las X de las O. Ponle a cada casilla con O la clase o, y haz que esa clase la pinte de rosado #db2777.',
+      pista:
+        'En pintar ya tienes valor. Junto al if de la clase gana, agrega otro: si valor es "O", boton.classList.add("o"). Después crea la regla .o en el CSS.',
+      parches: [
+        { lang: 'js', de: '    if (ganadora.includes(i)) {', a: '    if (valor === "O") {\n      boton.classList.add("o");\n    }\n    if (ganadora.includes(i)) {' },
+        { lang: 'css', de: '.gana {', a: '.o {\n  color: #db2777;\n}\n.gana {' },
+      ],
+      acciones: jugadas(0, 4),
+      pruebas: [
+        { t: 'clase', sel: '#tablero [data-i="4"]', name: 'o', msg: 'La casilla de la O debería llevar la clase o' },
+        { t: 'estilo', sel: '#tablero [data-i="4"]', prop: 'color', eq: '#db2777', msg: 'La O debería verse rosada: #db2777' },
+        { t: 'estilo', sel: '#tablero [data-i="0"]', prop: 'color', eq: '#0c4a6e', msg: 'La X se tiene que quedar de su color: #0c4a6e' },
+      ],
+    },
+    {
+      id: 'm3',
+      titulo: 'Un empate que se note',
+      enunciado:
+        'Cuando hay empate, el estado debe decir “Empate: nadie gana” y el tablero quedar medio transparente, con la clase empate y opacity: 0.5. Al empezar una partida nueva, el tablero vuelve a verse normal.',
+      pista:
+        'Donde hoy se escribe "Empate", cambia el texto y agrega tablero.classList.add("empate"). En Nueva partida, tablero.classList.remove("empate"). Y en el CSS, la regla .empate.',
+      parches: [
+        { lang: 'js', de: '    estado.textContent = "Empate";', a: '    estado.textContent = "Empate: nadie gana";\n    tablero.classList.add("empate");' },
+        { lang: 'js', de: '  ganadora = [];', a: '  ganadora = [];\n  tablero.classList.remove("empate");' },
+        { lang: 'css', de: '#nueva {', a: '.empate {\n  opacity: 0.5;\n}\n#nueva {' },
+      ],
+      acciones: EMPATE,
+      pruebas: [
+        { t: 'texto', sel: '#estado', eq: 'Empate: nadie gana', msg: 'Llené el tablero sin línea: el estado debería decir Empate: nadie gana' },
+        { t: 'clase', sel: '#tablero', name: 'empate', msg: 'Con empate, el tablero debería llevar la clase empate' },
+        { t: 'estilo', sel: '#tablero', prop: 'opacity', eq: '0.5', msg: 'Con empate, el tablero debería quedar con opacity: 0.5' },
+      ],
+    },
+    {
+      id: 'm4',
+      titulo: 'El marcador',
+      enunciado:
+        'Agrega debajo del estado un párrafo con id="marcador" que empiece en “X: 0 | O: 0” y sume una partida al que gane. El marcador no se borra con Nueva partida.',
+      pista:
+        'Guarda los puntos en un objeto: const puntos = { X: 0, O: 0 }; Como turno vale "X" o "O", puntos[turno]++ le suma al que acaba de ganar. Después escribe el marcador con puntos.X y puntos.O.',
+      parches: [
+        { lang: 'html', de: '  <h2 id="estado">Turno de X</h2>', a: '  <h2 id="estado">Turno de X</h2>\n  <p id="marcador">X: 0 | O: 0</p>' },
+        { lang: 'js', de: 'let ganadora = [];', a: 'let ganadora = [];\nconst puntos = { X: 0, O: 0 };' },
+        {
+          lang: 'js',
+          de: '    estado.textContent = "¡Ganó " + turno + "!";',
+          a: '    estado.textContent = "¡Ganó " + turno + "!";\n    puntos[turno]++;\n    document.getElementById("marcador").textContent = "X: " + puntos.X + " | O: " + puntos.O;',
+        },
+      ],
+      acciones: [...GANA_X, clic('#nueva'), ...jugadas(0, 3, 1, 4, 8, 5)],
+      pruebas: [
+        { t: 'texto', sel: '#estado', eq: '¡Ganó O!', msg: 'En la segunda partida O hizo la fila del medio: debería decir ¡Ganó O!' },
+        { t: 'texto', sel: '#marcador', eq: 'X: 1 | O: 1', msg: 'Ganó X la primera y O la segunda: el marcador debería decir X: 1 | O: 1' },
+      ],
+    },
+    {
+      id: 'm5',
+      titulo: 'Turnarse para empezar',
+      enunciado:
+        'Siempre empieza X y eso no es justo. Haz que cada partida nueva la empiece el que no empezó la anterior: la primera X, la segunda O, la tercera X…',
+      pista:
+        'Una variable let empieza = "X"; recuerda quién abrió. En Nueva partida, cámbiala con el mismo truco de los turnos, pon turno = empieza y escribe "Turno de " + turno en vez del texto fijo.',
+      parches: [
+        { lang: 'js', de: 'let turno = "X";', a: 'let turno = "X";\nlet empieza = "X";' },
+        { lang: 'js', de: '  turno = "X";', a: '  empieza = empieza === "X" ? "O" : "X";\n  turno = empieza;' },
+        { lang: 'js', de: '  estado.textContent = "Turno de X";', a: '  estado.textContent = "Turno de " + turno;' },
+      ],
+      acciones: [...GANA_X, clic('#nueva'), casilla(0)],
+      pruebas: [
+        { t: 'texto', sel: '#tablero [data-i="0"]', eq: 'O', msg: 'En la segunda partida, la primera jugada debería ser de O' },
+        { t: 'texto', sel: '#estado', eq: 'Turno de X', msg: 'Después de que O abre, el estado debería decir: Turno de X' },
+      ],
+    },
+    {
+      id: 'm6',
+      titulo: 'Deshacer',
+      enunciado:
+        'Agrega un botón con id="deshacer" que diga “Deshacer”, debajo del tablero. Borra la última jugada y le devuelve el turno a quien la hizo. Si la partida ya terminó, no hace nada.',
+      pista:
+        'Lleva un historial: let historial = []; y en cada jugada, historial.push(i). Deshacer saca la última con historial.pop(), vacía esa casilla, cambia el turno, actualiza el estado y vuelve a pintar. En Nueva partida, el historial también se vacía.',
+      parches: [
+        { lang: 'html', de: '  <div id="tablero"></div>', a: '  <div id="tablero"></div>\n  <button id="deshacer">Deshacer</button>' },
+        { lang: 'js', de: 'let ganadora = [];', a: 'let ganadora = [];\nlet historial = [];' },
+        { lang: 'js', de: '  casillas[i] = turno;', a: '  casillas[i] = turno;\n  historial.push(i);' },
+        { lang: 'js', de: '  ganadora = [];', a: '  ganadora = [];\n  historial = [];' },
+        {
+          lang: 'js',
+          de: '});\n\npintar();',
+          a: '});\n\ndocument.getElementById("deshacer").addEventListener("click", () => {\n  if (terminado || historial.length === 0) return;\n  const ultima = historial.pop();\n  casillas[ultima] = "";\n  turno = turno === "X" ? "O" : "X";\n  estado.textContent = "Turno de " + turno;\n  pintar();\n});\n\npintar();',
+        },
+      ],
+      acciones: [casilla(0), casilla(4), clic('#deshacer'), casilla(8)],
+      pruebas: [
+        { t: 'texto', sel: '#deshacer', eq: 'Deshacer', msg: 'Falta el botón con id="deshacer" que dice: Deshacer' },
+        { t: 'texto', sel: '#tablero [data-i="4"]', eq: '', msg: 'Deshice la O de la casilla 4: debería quedar vacía' },
+        { t: 'texto', sel: '#tablero [data-i="8"]', eq: 'O', msg: 'Después de deshacer le tocaba otra vez a O, y jugó en la 8' },
+        { t: 'texto', sel: '#estado', eq: 'Turno de X', msg: 'Después de la O en la 8, el estado debería decir: Turno de X' },
+      ],
+    },
+    {
+      id: 'm7',
+      titulo: 'La pista',
+      enunciado:
+        'Agrega un botón con id="pista" que diga “Pista”. Al presionarlo, busca una línea donde el jugador de turno ya tenga dos y la tercera esté libre, y a esa casilla libre le pone la clase sugerida, con un borde de afuera amarillo: outline: 3px solid #fde047. Solo ayuda al que tiene el turno.',
+      pista:
+        'Con LINEAS.find busca la línea: saca sus tres valores con linea.map((j) => casillas[j]), cuenta los del turno con filter(…).length === 2 y revisa que includes("") sea verdad. La casilla libre de esa línea es linea.find((j) => casillas[j] === ""), y su botón es tablero.children[libre].',
+      parches: [
+        { lang: 'html', de: '  <button id="deshacer">Deshacer</button>', a: '  <button id="deshacer">Deshacer</button>\n  <button id="pista">Pista</button>' },
+        { lang: 'css', de: '.empate {', a: '.sugerida {\n  outline: 3px solid #fde047;\n}\n.empate {' },
+        {
+          lang: 'js',
+          de: '});\n\npintar();',
+          a: '});\n\ndocument.getElementById("pista").addEventListener("click", () => {\n  if (terminado) return;\n  const linea = LINEAS.find((l) => {\n    const valores = l.map((j) => casillas[j]);\n    return valores.filter((v) => v === turno).length === 2 && valores.includes("");\n  });\n  if (linea) {\n    const libre = linea.find((j) => casillas[j] === "");\n    tablero.children[libre].classList.add("sugerida");\n  }\n});\n\npintar();',
+        },
+      ],
+      acciones: [...jugadas(0, 3, 1, 4), clic('#pista')],
+      pruebas: [
+        { t: 'clase', sel: '#tablero [data-i="2"]', name: 'sugerida', msg: 'X tiene 0 y 1: la pista debería marcar la casilla 2 con la clase sugerida' },
+        { t: 'clase', sel: '#tablero [data-i="5"]', name: 'sugerida', tiene: false, msg: 'La casilla 5 le sirve a O, pero el turno es de X: no debería marcarse' },
+        { t: 'estilo', sel: '#tablero [data-i="2"]', prop: 'outline-style', eq: 'solid', msg: 'La casilla sugerida debería tener outline: 3px solid #fde047' },
+      ],
+    },
+  ],
+}
+
+/* ========================================================================== */
+/* Proyecto 8 — el jefe final: barajar, un estado con varias piezas que se    */
+/* vigilan entre sí, un setTimeout que bloquea el tablero, un reloj que       */
+/* arranca y se detiene, récord y niveles.                                    */
+/* ========================================================================== */
+
+const HTML_8 = `<div class="memoria">
+  <div class="info">
+    <span id="movimientos">Movimientos: 0</span>
+    <span id="parejas">Parejas: 0 de 4</span>
+  </div>
+  <div id="tablero"></div>
+  <p id="mensaje"></p>
+</div>`
+
+const CSS_8 = `body {
+  background: #3b0764;
+  font-family: Arial, sans-serif;
+}
+.memoria {
+  width: 300px;
+  margin: 16px auto;
+  color: #ffffff;
+}
+.info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+#tablero {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.carta {
+  height: 64px;
+  background: #a855f7;
+  color: transparent;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.carta.volteada {
+  background: #ffffff;
+  color: #3b0764;
+}
+.carta.pareja {
+  background: #bbf7d0;
+  color: #14532d;
+}`
+
+const JS_8 = `const figuras = ["sol", "luna", "mar", "flor"];
+
+const tablero = document.getElementById("tablero");
+const movimientos = document.getElementById("movimientos");
+const parejas = document.getElementById("parejas");
+const mensaje = document.getElementById("mensaje");
+
+let primera = null;
+let bloqueado = false;
+let jugadas = 0;
+let encontradas = 0;
+
+function barajar(lista) {
+  const copia = [...lista];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+}
+
+function repartir() {
+  tablero.innerHTML = "";
+  barajar([...figuras, ...figuras]).forEach((figura) => {
+    const carta = document.createElement("button");
+    carta.className = "carta";
+    carta.dataset.figura = figura;
+    carta.textContent = figura;
+    tablero.appendChild(carta);
+  });
+}
+
+tablero.addEventListener("click", (e) => {
+  const carta = e.target;
+  if (!carta.classList.contains("carta")) return;
+  if (bloqueado || carta === primera || carta.classList.contains("pareja")) return;
+
+  carta.classList.add("volteada");
+
+  if (primera === null) {
+    primera = carta;
+    return;
+  }
+
+  jugadas++;
+  movimientos.textContent = "Movimientos: " + jugadas;
+
+  if (primera.dataset.figura === carta.dataset.figura) {
+    primera.classList.add("pareja");
+    carta.classList.add("pareja");
+    primera = null;
+    encontradas++;
+    parejas.textContent = "Parejas: " + encontradas + " de " + figuras.length;
+    if (encontradas === figuras.length) {
+      mensaje.textContent = "¡Ganaste en " + jugadas + " movimientos!";
+    }
+  } else {
+    bloqueado = true;
+    setTimeout(() => {
+      primera.classList.remove("volteada");
+      carta.classList.remove("volteada");
+      primera = null;
+      bloqueado = false;
+    }, 800);
+  }
+});
+
+repartir();`
+
+/**
+ * Voltea una carta de esa figura que todavía esté boca abajo. Las cartas salen
+ * barajadas, así que la revisión no las busca por posición sino por figura.
+ */
+const voltear = (figura: string): Accion => clic(`.carta[data-figura="${figura}"]:not(.volteada)`)
+const pareja = (figura: string) => [voltear(figura), voltear(figura)]
+/** Las seis parejas, sin un solo error: 6 movimientos. */
+const GANAR = ['sol', 'luna', 'mar', 'flor', 'nube', 'pez'].flatMap(pareja)
+
+export const PROYECTO_8: Proyecto = {
+  id: 'p8',
+  numero: 8,
+  titulo: 'El juego de memoria',
+  nivel: 'Nivel jefe',
+  lema: 'Proyecto 8 · El jefe final: barajar, un estado con muchas piezas y el tiempo de tu lado',
+  descripcion:
+    'Cartas boca abajo, se voltean de a dos y, si son iguales, se quedan. Si no, el tablero se bloquea un momento y se vuelven a esconder. Aquí se junta todo: barajar un arreglo, un estado que se vigila a sí mismo para que nadie haga trampa y temporizadores. Tus misiones le agregan un reloj, nueva partida, récord y niveles.',
+  html: HTML_8,
+  css: CSS_8,
+  js: JS_8,
+  misiones: [
+    {
+      id: 'm1',
+      titulo: 'Réplica exacta',
+      enunciado:
+        'Escribe los tres archivos hasta que tu juego funcione igual que el modelo: las cartas salen barajadas, las parejas se quedan, las que no coinciden se esconden solas y mientras tanto no se puede voltear otra.',
+      pista:
+        'Tres piezas del estado hacen todo el trabajo: primera guarda la carta que ya está volteada, bloqueado impide jugar mientras se esconden, y encontradas cuenta parejas. [...figuras, ...figuras] pone cada figura dos veces, y barajar las revuelve intercambiando posiciones al azar.',
+      parches: [],
+      acciones: [
+        voltear('sol'), voltear('luna'), esperar(1000),
+        ...pareja('sol'), ...pareja('mar'),
+        voltear('luna'), voltear('flor'), voltear('flor'),
+      ],
+      pruebas: [
+        { t: 'conteo', sel: '#tablero .carta', eq: 8, msg: 'El tablero debería tener 8 cartas con class="carta"' },
+        { t: 'conteo', sel: '.carta[data-figura="sol"]', eq: 2, msg: 'Cada figura va dos veces: debería haber dos cartas de sol' },
+        { t: 'texto', sel: '#movimientos', eq: 'Movimientos: 4', msg: 'Hice 4 intentos: debería decir Movimientos: 4' },
+        { t: 'texto', sel: '#parejas', eq: 'Parejas: 2 de 4', msg: 'Encontré sol y mar: debería decir Parejas: 2 de 4' },
+        { t: 'conteo', sel: '.carta.pareja', eq: 4, msg: 'Las 4 cartas de las dos parejas deberían llevar la clase pareja' },
+        { t: 'conteo', sel: '.carta.volteada', eq: 6, msg: 'Voltee luna y flor, no coincidieron, y antes de que se escondieran quise voltear otra flor: el tablero tenía que estar bloqueado' },
+        { t: 'estilo', sel: 'body', prop: 'background-color', eq: '#3b0764', msg: 'El fondo de la página debe ser #3b0764' },
+        { t: 'estilo', sel: '.info', prop: 'display', eq: 'flex', msg: 'La barra de información necesita display: flex' },
+        { t: 'estilo', sel: '#tablero', prop: 'display', eq: 'grid', msg: 'El tablero necesita display: grid' },
+        { t: 'estilo', sel: '#tablero', prop: 'column-gap', eq: '8px', msg: 'Al tablero le falta el gap: 8px' },
+        { t: 'estilo', sel: '.carta', prop: 'border-radius', eq: '10px', msg: 'Las cartas llevan esquinas de 10px' },
+        { t: 'estilo', sel: '.carta.pareja', prop: 'background-color', eq: '#bbf7d0', msg: 'Las parejas encontradas deben verse verdes: #bbf7d0' },
+      ],
+    },
+    {
+      id: 'm2',
+      titulo: 'Más cartas',
+      enunciado:
+        'Cuatro parejas se acaban muy rápido. Agrega dos figuras más, “nube” y “pez”, para jugar con 12 cartas. Y que el contador de parejas diga “de 6” desde el principio.',
+      pista:
+        'Las cartas salen del arreglo figuras: agrega ahí las dos. El JavaScript ya usa figuras.length, pero el texto con el que arranca la página está escrito a mano en el HTML.',
+      parches: [
+        { lang: 'js', de: '"flor"];', a: '"flor", "nube", "pez"];' },
+        { lang: 'html', de: 'Parejas: 0 de 4', a: 'Parejas: 0 de 6' },
+      ],
+      acciones: pareja('nube'),
+      pruebas: [
+        { t: 'conteo', sel: '#tablero .carta', eq: 12, msg: 'Con seis figuras debería haber 12 cartas' },
+        { t: 'conteo', sel: '.carta[data-figura="pez"]', eq: 2, msg: 'Debería haber dos cartas de pez' },
+        { t: 'texto', sel: '#parejas', eq: 'Parejas: 1 de 6', msg: 'Encontré la pareja de nube: debería decir Parejas: 1 de 6' },
+      ],
+    },
+    {
+      id: 'm3',
+      titulo: 'El dorso de las cartas',
+      enunciado: 'Las cartas boca abajo se ven planas. Cámbiales el fondo a #7e22ce y ponles un borde de 3px sólido #d8b4fe.',
+      pista: 'Todo va en la regla .carta: cambia el background y reemplaza border: none; por el borde nuevo.',
+      parches: [
+        { lang: 'css', de: '  background: #a855f7;', a: '  background: #7e22ce;' },
+        { lang: 'css', de: '  border: none;', a: '  border: 3px solid #d8b4fe;' },
+      ],
+      pruebas: [
+        { t: 'estilo', sel: '.carta', prop: 'background-color', eq: '#7e22ce', msg: 'Las cartas boca abajo todavía no son #7e22ce' },
+        { t: 'estilo', sel: '.carta', prop: 'border-top-width', eq: '3px', msg: 'A las cartas les falta el borde de 3px' },
+        { t: 'estilo', sel: '.carta', prop: 'border-top-color', eq: '#d8b4fe', msg: 'El borde de las cartas debe ser #d8b4fe' },
+      ],
+    },
+    {
+      id: 'm4',
+      titulo: 'Menos espera',
+      enunciado: 'Cuando dos cartas no coinciden, el juego espera 800 milisegundos antes de esconderlas. Bájalo a 400: ya sabemos jugar.',
+      pista: 'El número que va al final del setTimeout es cuánto espera, en milisegundos.',
+      parches: [{ lang: 'js', de: '}, 800);', a: '}, 400);' }],
+      acciones: [voltear('sol'), voltear('luna'), esperar(500), voltear('mar')],
+      pruebas: [
+        { t: 'conteo', sel: '.carta.volteada', eq: 1, msg: 'Pasado medio segundo, sol y luna ya tenían que haberse escondido y yo poder voltear otra: debería quedar una sola carta volteada' },
+      ],
+    },
+    {
+      id: 'm5',
+      titulo: 'El reloj de la partida',
+      enunciado:
+        'Agrega en la barra de información un span con id="tiempo" que diga “Tiempo: 0 s”. El reloj arranca con la primera carta que volteas, sube cada segundo y se detiene al ganar.',
+      pista:
+        'Dos variables nuevas: let segundos = 0; y let reloj = null; Al voltear, si reloj es null, arráncalo con setInterval de 1000. Al ganar, clearInterval(reloj). Así el reloj no se arranca dos veces ni sigue contando después.',
+      parches: [
+        { lang: 'html', de: 'Parejas: 0 de 6</span>', a: 'Parejas: 0 de 6</span>\n    <span id="tiempo">Tiempo: 0 s</span>' },
+        { lang: 'js', de: 'let encontradas = 0;', a: 'let encontradas = 0;\nlet segundos = 0;\nlet reloj = null;' },
+        {
+          lang: 'js',
+          de: '  carta.classList.add("volteada");',
+          a: '  if (reloj === null) {\n    reloj = setInterval(() => {\n      segundos++;\n      document.getElementById("tiempo").textContent = "Tiempo: " + segundos + " s";\n    }, 1000);\n  }\n\n  carta.classList.add("volteada");',
+        },
+        {
+          lang: 'js',
+          de: '      mensaje.textContent = "¡Ganaste en " + jugadas + " movimientos!";',
+          a: '      mensaje.textContent = "¡Ganaste en " + jugadas + " movimientos!";\n      clearInterval(reloj);',
+        },
+      ],
+      acciones: [voltear('sol'), esperar(2000), voltear('sol'), esperar(1000), ...GANAR.slice(2), esperar(5000)],
+      pruebas: [
+        { t: 'texto', sel: '#mensaje', eq: '¡Ganaste en 6 movimientos!', msg: 'Encontré las seis parejas sin fallar: debería decir ¡Ganaste en 6 movimientos!' },
+        { t: 'texto', sel: '#tiempo', eq: 'Tiempo: 3 s', msg: 'Gané a los 3 segundos y esperé 5 más: el reloj tenía que quedarse en Tiempo: 3 s' },
+      ],
+    },
+    {
+      id: 'm6',
+      titulo: 'Nueva partida',
+      enunciado:
+        'Agrega debajo del mensaje un botón con id="nueva" que diga “Nueva partida”. Vuelve a barajar y deja todo en cero: movimientos, parejas, tiempo y mensaje. El reloj no vuelve a correr hasta que voltees una carta.',
+      pista:
+        'Haz una lista de todo lo que el juego recuerda —cada let de arriba— y devuélvelo a como empezó. Para el reloj: clearInterval(reloj) y después reloj = null, porque así sabe que puede volver a arrancar. Al final, repartir().',
+      parches: [
+        { lang: 'html', de: '  <p id="mensaje"></p>', a: '  <p id="mensaje"></p>\n  <button id="nueva">Nueva partida</button>' },
+        {
+          lang: 'js',
+          de: '});\n\nrepartir();',
+          a: '});\n\ndocument.getElementById("nueva").addEventListener("click", () => {\n  clearInterval(reloj);\n  reloj = null;\n  segundos = 0;\n  primera = null;\n  bloqueado = false;\n  jugadas = 0;\n  encontradas = 0;\n  movimientos.textContent = "Movimientos: 0";\n  parejas.textContent = "Parejas: 0 de " + figuras.length;\n  document.getElementById("tiempo").textContent = "Tiempo: 0 s";\n  mensaje.textContent = "";\n  repartir();\n});\n\nrepartir();',
+        },
+      ],
+      acciones: [...GANAR, esperar(2000), clic('#nueva'), esperar(3000)],
+      pruebas: [
+        { t: 'texto', sel: '#nueva', eq: 'Nueva partida', msg: 'Falta el botón con id="nueva" que dice: Nueva partida' },
+        { t: 'conteo', sel: '.carta.volteada', eq: 0, msg: 'En la partida nueva todas las cartas deberían estar boca abajo' },
+        { t: 'texto', sel: '#movimientos', eq: 'Movimientos: 0', msg: 'La partida nueva debería arrancar en Movimientos: 0' },
+        { t: 'texto', sel: '#parejas', eq: 'Parejas: 0 de 6', msg: 'La partida nueva debería arrancar en Parejas: 0 de 6' },
+        { t: 'texto', sel: '#mensaje', eq: '', msg: 'En la partida nueva no debería quedar el mensaje de ganaste' },
+        { t: 'texto', sel: '#tiempo', eq: 'Tiempo: 0 s', msg: 'Empecé partida nueva y esperé 3 segundos sin voltear nada: el tiempo tenía que seguir en 0 s' },
+      ],
+    },
+    {
+      id: 'm7',
+      titulo: 'El récord',
+      enunciado:
+        'Agrega debajo del mensaje un párrafo con id="record" que empiece diciendo “Récord: sin jugar”. Cada vez que alguien gane con menos movimientos que el récord, se actualiza: “Récord: 6 movimientos”. Si gana con más, el récord no cambia.',
+      pista:
+        'let record = null; guarda el mejor. Al ganar: si record es null (nunca se ha jugado) o jugadas < record, entonces record = jugadas y escribes el texto. No lo reinicies en Nueva partida: la gracia es que dure.',
+      parches: [
+        { lang: 'html', de: '  <p id="mensaje"></p>', a: '  <p id="mensaje"></p>\n  <p id="record">Récord: sin jugar</p>' },
+        { lang: 'js', de: 'let reloj = null;', a: 'let reloj = null;\nlet record = null;' },
+        {
+          lang: 'js',
+          de: '      clearInterval(reloj);',
+          a: '      clearInterval(reloj);\n      if (record === null || jugadas < record) {\n        record = jugadas;\n        document.getElementById("record").textContent = "Récord: " + record + " movimientos";\n      }',
+        },
+      ],
+      acciones: [...GANAR, clic('#nueva'), voltear('sol'), voltear('luna'), esperar(500), ...GANAR],
+      pruebas: [
+        { t: 'texto', sel: '#mensaje', eq: '¡Ganaste en 7 movimientos!', msg: 'En la segunda partida fallé una vez: debería decir ¡Ganaste en 7 movimientos!' },
+        { t: 'texto', sel: '#record', eq: 'Récord: 6 movimientos', msg: 'Gané en 6 y después en 7: el récord se tiene que quedar en Récord: 6 movimientos' },
+      ],
+    },
+    {
+      id: 'm8',
+      titulo: 'Niveles',
+      enunciado:
+        'Agrega antes del tablero un select con id="nivel" y tres opciones: Fácil (4 parejas), Normal (6, la que viene elegida) y Difícil (8). Para el Difícil suma las figuras “luz” y “pan”. Al cambiar de nivel empieza una partida nueva con esa cantidad de parejas.',
+      pista:
+        'Cada option lleva la cantidad en value, y Normal lleva selected. Crea una función cantidad() que devuelva Number(nivel.value) y úsala en vez de figuras.length (son tres lugares). Para repartir, toma solo las que tocan con figuras.slice(0, cantidad()). Y en el change del select, basta con hacerle click() al botón de Nueva partida.',
+      parches: [
+        { lang: 'js', de: '"nube", "pez"];', a: '"nube", "pez", "luz", "pan"];' },
+        {
+          lang: 'html',
+          de: '  <div id="tablero"></div>',
+          a: '  <select id="nivel">\n    <option value="4">Fácil</option>\n    <option value="6" selected>Normal</option>\n    <option value="8">Difícil</option>\n  </select>\n  <div id="tablero"></div>',
+        },
+        { lang: 'js', de: 'function barajar(lista) {', a: 'function cantidad() {\n  return Number(document.getElementById("nivel").value);\n}\n\nfunction barajar(lista) {' },
+        { lang: 'js', de: '  barajar([...figuras, ...figuras])', a: '  const elegidas = figuras.slice(0, cantidad());\n  barajar([...elegidas, ...elegidas])' },
+        // figuras.length aparece tres veces y cada parche reemplaza la primera que encuentre.
+        { lang: 'js', de: 'figuras.length', a: 'cantidad()' },
+        { lang: 'js', de: 'figuras.length', a: 'cantidad()' },
+        { lang: 'js', de: 'figuras.length', a: 'cantidad()' },
+        {
+          lang: 'js',
+          de: '});\n\nrepartir();',
+          a: '});\n\ndocument.getElementById("nivel").addEventListener("change", () => {\n  document.getElementById("nueva").click();\n});\n\nrepartir();',
+        },
+      ],
+      acciones: [{ t: 'escribir', sel: '#nivel', texto: '8' }, ...pareja('pan')],
+      pruebas: [
+        { t: 'conteo', sel: '#nivel option', eq: 3, msg: 'El select con id="nivel" debería tener tres opciones' },
+        { t: 'conteo', sel: '#tablero .carta', eq: 16, msg: 'Elegí Difícil: debería haber 16 cartas' },
+        { t: 'texto', sel: '#parejas', eq: 'Parejas: 1 de 8', msg: 'En Difícil encontré la pareja de pan: debería decir Parejas: 1 de 8' },
+      ],
+    },
+  ],
+}
+
+export const PROYECTOS: Proyecto[] = [
+  PROYECTO_1,
+  PROYECTO_2,
+  PROYECTO_3,
+  PROYECTO_4,
+  PROYECTO_5,
+  PROYECTO_6,
+  PROYECTO_7,
+  PROYECTO_8,
+]
 
 export function proyectoPorId(id: string) {
   return PROYECTOS.find((p) => p.id === id)

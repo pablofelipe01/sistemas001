@@ -30,10 +30,10 @@ conectar Supabase (ver abajo).
 | `/` | El alumno escribe su nombre y entra. Ese nombre es su llave. |
 | `/examen` | El examen. Enunciado, terminal y resultado. |
 | `/proyecto` | Índice de los proyectos guiados, con el avance de cada uno. |
-| `/proyecto/p1` … `/proyecto/p5` | El taller: código del modelo, terminal del alumno y misiones. |
+| `/proyecto/p1` … `/proyecto/p8` | El taller: código del modelo, terminal del alumno y misiones. |
 | `/profesor` | Panel del profesor. Pide la clave de `PROFESOR_CLAVE`. |
 | `/verificar` | Autodiagnóstico: corre las 75 soluciones de referencia contra sus propias pruebas. |
-| `/verificar-proyecto` | Autodiagnóstico de los proyectos guiados: resuelve sus 36 misiones y las revisa. |
+| `/verificar-proyecto` | Autodiagnóstico de los proyectos guiados: resuelve sus 58 misiones y las revisa. |
 
 Las dos pantallas de `/verificar` valen la pena cada vez que se toque una pregunta o
 una misión: si algo sale en rojo, eso quedó imposible de resolver o su prueba no mide
@@ -57,11 +57,21 @@ pequeños que solo salen si entendió qué línea hace qué.
 | 3 | La calculadora de la cuenta | `Number()`, un `select`, validar con `if`, `classList`, `Math.round`, calcular mientras se escribe | 7 |
 | 4 | El quiz | Un arreglo de objetos, `forEach`, un índice que avanza, `hidden`, porcentajes, arreglar un botón que rompe el juego | 8 |
 | 5 | La tiendita con carrito | Estado en un arreglo, plantillas con `${}`, `data-*` y delegación, `map`/`find`/`filter`/`reduce`, `toLocaleString`, un cupón | 8 |
+| 6 | El cronómetro | `setInterval` y `clearInterval`, `padStart`, `disabled`, `prepend`, un atajo con `document.addEventListener`, `classList.toggle` | 7 |
+| 7 | Tres en raya | El tablero como arreglo, líneas ganadoras con `find`/`every`/`includes`, desestructurar, marcador, deshacer con un historial, una pista | 7 |
+| 8 | El juego de memoria | Barajar, un estado que se vigila (`primera`, `bloqueado`), `setTimeout`, un reloj que arranca y para, nueva partida, récord y niveles | 8 |
 
 Cada misión se revisa **ejecutando el proyecto del alumno de verdad**: se monta en la
 ventanita, se usa como lo usaría una persona —escribir en el cuadro, dar clics,
 presionar Enter— y después se mide el resultado: texto, estilo calculado, cuántos
 elementos hay, qué quedó escrito en un input, si lleva una clase, si la caja está centrada.
+
+Los temporizadores tienen truco. En la vista previa son de verdad y el cronómetro corre;
+en la revisión son de mentira, y la acción `esperar` adelanta el reloj de golpe, disparando
+en orden los `setTimeout` y `setInterval` que tocaban. Así “esperar un minuto” tarda un
+instante y da siempre el mismo resultado. Como la ventanita se reutiliza entre corridas,
+al montar un proyecto se barren los temporizadores y los listeners de `document` y
+`window` que dejó el anterior.
 
 Esa revisión corre en la misma ventana donde el alumno ve su resultado, y no en un
 iframe escondido: Chrome no le da maquetación a un iframe invisible o fuera de la

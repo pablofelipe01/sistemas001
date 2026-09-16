@@ -143,8 +143,8 @@ export default function Entrada() {
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
             Te damos un proyecto pequeño ya terminado: el HTML, el CSS, el JavaScript y el resultado funcionando. Lo
             vuelves a escribir tú en tu propia terminal y después le haces una lista de cambios. No se puede copiar
-            nada. Son cinco y van subiendo: de una tarjeta con un botón hasta una tiendita con carrito que suma, quita y
-            aplica cupones.
+            nada. Son ocho y van subiendo: de una tarjeta con un botón hasta un juego de memoria con reloj, récord y
+            niveles.
           </p>
         </div>
         <a href="/proyecto" className="boton boton-primario">
