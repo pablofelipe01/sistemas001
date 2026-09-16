@@ -30,10 +30,10 @@ conectar Supabase (ver abajo).
 | `/` | El alumno escribe su nombre y entra. Ese nombre es su llave. |
 | `/examen` | El examen. Enunciado, terminal y resultado. |
 | `/proyecto` | Índice de los proyectos guiados, con el avance de cada uno. |
-| `/proyecto/p1`, `/proyecto/p2` | El taller: código del modelo, terminal del alumno y misiones. |
+| `/proyecto/p1` … `/proyecto/p5` | El taller: código del modelo, terminal del alumno y misiones. |
 | `/profesor` | Panel del profesor. Pide la clave de `PROFESOR_CLAVE`. |
 | `/verificar` | Autodiagnóstico: corre las 75 soluciones de referencia contra sus propias pruebas. |
-| `/verificar-proyecto` | Autodiagnóstico del proyecto guiado: resuelve sus 6 misiones y las revisa. |
+| `/verificar-proyecto` | Autodiagnóstico de los proyectos guiados: resuelve sus 36 misiones y las revisa. |
 
 Las dos pantallas de `/verificar` valen la pena cada vez que se toque una pregunta o
 una misión: si algo sale en rojo, eso quedó imposible de resolver o su prueba no mide
@@ -54,11 +54,14 @@ pequeños que solo salen si entendió qué línea hace qué.
 |---|---|---|---|
 | 1 | La tarjeta que saluda | Etiquetas, colores, centrar con `margin: auto`, un contador de clics | 6 |
 | 2 | La lista de tareas | Leer un `input`, crear elementos con JavaScript, flexbox, singular/plural, la tecla Enter | 7 |
+| 3 | La calculadora de la cuenta | `Number()`, un `select`, validar con `if`, `classList`, `Math.round`, calcular mientras se escribe | 7 |
+| 4 | El quiz | Un arreglo de objetos, `forEach`, un índice que avanza, `hidden`, porcentajes, arreglar un botón que rompe el juego | 8 |
+| 5 | La tiendita con carrito | Estado en un arreglo, plantillas con `${}`, `data-*` y delegación, `map`/`find`/`filter`/`reduce`, `toLocaleString`, un cupón | 8 |
 
 Cada misión se revisa **ejecutando el proyecto del alumno de verdad**: se monta en la
 ventanita, se usa como lo usaría una persona —escribir en el cuadro, dar clics,
 presionar Enter— y después se mide el resultado: texto, estilo calculado, cuántos
-elementos hay, qué quedó escrito en un input, si la caja está centrada.
+elementos hay, qué quedó escrito en un input, si lleva una clase, si la caja está centrada.
 
 Esa revisión corre en la misma ventana donde el alumno ve su resultado, y no en un
 iframe escondido: Chrome no le da maquetación a un iframe invisible o fuera de la
