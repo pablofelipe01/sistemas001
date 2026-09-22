@@ -6,7 +6,7 @@
 --    2. Menú de la izquierda → SQL Editor → New query
 --    3. Pega todo este archivo y dale Run
 --
---  Las dos tablas van con RLS activo y SIN políticas: eso significa que nadie
+--  Las tablas van con RLS activo y SIN políticas: eso significa que nadie
 --  puede leerlas ni escribirlas desde el navegador. Solo las rutas de API de la
 --  app, que usan la service role key desde el servidor, tienen acceso.
 --  Es a propósito: como los alumnos entran solo con su nombre (sin contraseña),
@@ -45,9 +45,25 @@ create index if not exists eventos_slug_idx   on public.eventos (slug);
 create index if not exists eventos_creado_idx on public.eventos (creado desc);
 
 comment on table public.eventos    is 'Bitácora de lo que vale la pena que el profesor vea.';
-comment on column public.eventos.tipo is 'pegado-bloqueado | copia-bloqueada | ayuda | salto | resuelto | fallo';
+comment on column public.eventos.tipo is 'pegado-bloqueado | copia-bloqueada | ayuda | salto | resuelto | fallo | mision';
 
-alter table public.alumnos enable row level security;
-alter table public.eventos enable row level security;
+create table if not exists public.proyectos (
+  slug         text not null,
+  proyecto     text not null,
+  nombre       text not null,
+  hechas       jsonb   not null default '[]'::jsonb,
+  teclas       integer not null default 0,
+  pegados      integer not null default 0,
+  codigo       jsonb   not null default '{}'::jsonb,
+  actualizado  timestamptz not null default now(),
+  primary key (slug, proyecto)
+);
+
+comment on table  public.proyectos        is 'Un renglón por alumno y proyecto guiado: misiones hechas, teclas, pegados bloqueados y el código.';
+comment on column public.proyectos.hechas is 'Los id de las misiones cumplidas, en orden.';
+
+alter table public.alumnos   enable row level security;
+alter table public.eventos   enable row level security;
+alter table public.proyectos enable row level security;
 
 -- Sin políticas a propósito: el acceso anónimo queda cerrado por completo.

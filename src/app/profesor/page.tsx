@@ -3,6 +3,7 @@
 import { Fragment, useState } from 'react'
 import { ALL_CHALLENGES, SECCIONES, TOTAL } from '@/lib/challenges'
 import type { Progreso } from '@/lib/progress'
+import { PROYECTOS, proyectoPorId } from '@/lib/proyectos'
 
 interface FilaAlumno {
   slug: string
@@ -13,6 +14,16 @@ interface FilaAlumno {
   mejor_racha: number
   progreso: Progreso
   inicio: string | null
+  actualizado: string
+}
+
+interface AvanceProyecto {
+  slug: string
+  proyecto: string
+  nombre: string
+  hechas: string[]
+  teclas: number
+  pegados: number
   actualizado: string
 }
 
@@ -32,11 +43,17 @@ const NOMBRE_EVENTO: Record<string, string> = {
   salto: '⏭️ saltó un reto',
   resuelto: '✅ resolvió',
   fallo: '✕ falló',
+  mision: '🧩 cumplió una misión',
 }
 
 export default function Profesor() {
   const [clave, setClave] = useState('')
-  const [datos, setDatos] = useState<{ alumnos: FilaAlumno[]; eventos: Evento[]; nube: boolean } | null>(null)
+  const [datos, setDatos] = useState<{
+    alumnos: FilaAlumno[]
+    eventos: Evento[]
+    proyectos?: AvanceProyecto[]
+    nube: boolean
+  } | null>(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const [abierto, setAbierto] = useState<string | null>(null)
@@ -181,6 +198,8 @@ export default function Profesor() {
         </div>
       )}
 
+      <TablaProyectos avances={datos.proyectos ?? []} />
+
       <section className="panel p-5">
         <h2 className="mb-3 text-sm font-bold">Últimos movimientos</h2>
         {datos.eventos.length === 0 ? (
@@ -193,12 +212,18 @@ export default function Profesor() {
                 <span className="w-32 shrink-0 font-bold text-[#9fb0d4]">{e.slug}</span>
                 <span
                   className={
-                    e.tipo.includes('bloquead') ? 'text-[#fb7185]' : e.tipo === 'resuelto' ? 'text-[#4ade80]' : 'text-[#7f8fb3]'
+                    e.tipo.includes('bloquead')
+                      ? 'text-[#fb7185]'
+                      : e.tipo === 'resuelto' || e.tipo === 'mision'
+                        ? 'text-[#4ade80]'
+                        : 'text-[#7f8fb3]'
                   }
                 >
                   {NOMBRE_EVENTO[e.tipo] ?? e.tipo}
                 </span>
-                <span className="text-[#4b5b80]">{e.reto}</span>
+                <span className="text-[#4b5b80]">
+                  {e.reto && proyectoPorId(e.reto) ? `Proyecto ${proyectoPorId(e.reto)!.numero}` : e.reto}
+                </span>
                 {e.detalle && <span className="text-[#3f5074]">· {e.detalle}</span>}
               </li>
             ))}
@@ -250,5 +275,94 @@ function DetalleAlumno({ progreso }: { progreso: Progreso }) {
         encima para ver intentos y cuántas teclas escribió.
       </p>
     </div>
+  )
+}
+
+function TablaProyectos({ avances }: { avances: AvanceProyecto[] }) {
+  // Un renglón por alumno, una columna por proyecto.
+  const porAlumno = new Map<string, { nombre: string; ultimo: string; proyectos: Record<string, AvanceProyecto> }>()
+  for (const a of avances) {
+    const fila = porAlumno.get(a.slug) ?? { nombre: a.nombre, ultimo: a.actualizado, proyectos: {} }
+    fila.proyectos[a.proyecto] = a
+    if (a.actualizado > fila.ultimo) fila.ultimo = a.actualizado
+    porAlumno.set(a.slug, fila)
+  }
+  const cumplidas = (f: { proyectos: Record<string, AvanceProyecto> }) =>
+    Object.values(f.proyectos).reduce((n, p) => n + (p.hechas?.length ?? 0), 0)
+  const filas = [...porAlumno.entries()].sort((a, b) => cumplidas(b[1]) - cumplidas(a[1]))
+
+  return (
+    <section className="panel mb-8 p-5">
+      <h2 className="mb-1 text-sm font-bold">
+        Proyectos guiados <span className="font-normal text-[#7f8fb3]">· {filas.length} alumnos</span>
+      </h2>
+      <p className="mb-4 text-[11px] text-[#5a6b8f]">
+        Misiones cumplidas en cada proyecto. Pasa el mouse por encima para ver teclas escritas y pegados bloqueados.
+      </p>
+      {filas.length === 0 ? (
+        <p className="text-xs text-[#5a6b8f]">Nadie ha trabajado en los proyectos todavía.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-[#1e2b45] text-[10px] uppercase tracking-wider text-[#5a6b8f]">
+              <tr>
+                <th className="px-3 py-2">Alumno</th>
+                {PROYECTOS.map((p) => (
+                  <th key={p.id} className="px-2 py-2 text-center" title={p.titulo}>
+                    P{p.numero}
+                  </th>
+                ))}
+                <th className="px-3 py-2 text-right">Teclas</th>
+                <th className="px-3 py-2 text-right">Pegados</th>
+                <th className="px-3 py-2">Última vez</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map(([slug, f]) => {
+                const lista = Object.values(f.proyectos)
+                const teclas = lista.reduce((n, p) => n + (p.teclas ?? 0), 0)
+                const pegados = lista.reduce((n, p) => n + (p.pegados ?? 0), 0)
+                return (
+                  <tr key={slug} className="border-b border-[#141f36]">
+                    <td className="px-3 py-2 font-bold">{f.nombre}</td>
+                    {PROYECTOS.map((p) => {
+                      const a = f.proyectos[p.id]
+                      const hechas = a?.hechas?.length ?? 0
+                      const total = p.misiones.length
+                      const clase = !a
+                        ? 'bg-[#141f36] text-[#3f5074]'
+                        : hechas === total
+                          ? 'bg-[#166534] text-[#c9f7d8]'
+                          : hechas > 0
+                            ? 'bg-[#164e63] text-[#cffafe]'
+                            : 'bg-[#3f1d2b] text-[#ffd7e2]'
+                      return (
+                        <td key={p.id} className="px-1 py-2 text-center">
+                          <span
+                            title={`${p.titulo}${a ? ` — ${hechas}/${total} misiones, ${a.teclas} teclas, ${a.pegados} pegado(s) bloqueado(s)` : ' — sin empezar'}`}
+                            className={`inline-block min-w-11 rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${clase}`}
+                          >
+                            {a ? `${hechas}/${total}` : '—'}
+                          </span>
+                        </td>
+                      )
+                    })}
+                    <td className="px-3 py-2 text-right tabular-nums text-[#fbbf24]">{teclas}</td>
+                    <td className={`px-3 py-2 text-right tabular-nums ${pegados ? 'text-[#fb7185]' : 'text-[#5a6b8f]'}`}>
+                      {pegados}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-[#5a6b8f]">{new Date(f.ultimo).toLocaleString('es-CO')}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <p className="mt-3 text-[11px] text-[#4b5b80]">
+            Verde: proyecto terminado · Azul: va a mitad · Rojo: empezó a escribir pero no ha cumplido misiones · Gris:
+            no lo ha abierto.
+          </p>
+        </div>
+      )}
+    </section>
   )
 }

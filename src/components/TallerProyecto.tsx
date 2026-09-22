@@ -9,6 +9,7 @@ import { Confeti } from '@/components/Confeti'
 import { ProyectoRunner, type ResultadoPrueba } from '@/lib/proyecto-runner'
 import type { Proyecto } from '@/lib/proyectos'
 import { slugificar } from '@/lib/progress'
+import { registrarEvento } from '@/lib/storage'
 import type { Lang } from '@/lib/types'
 
 const LENGUAJES: Lang[] = ['html', 'css', 'js']
@@ -69,38 +70,60 @@ export function TallerProyecto({ proyecto: P }: { proyecto: Proyecto }) {
 
   const pegadoBloqueado = useCallback(() => {
     setPegados((n) => n + 1)
+    if (slug) registrarEvento(slug, 'pegado-bloqueado', P.id)
     avisar('Aquí no se pega: este proyecto se escribe con los dedos. Mira el modelo y tecléalo.', 'alerta')
-  }, [avisar])
+  }, [avisar, slug, P.id])
 
   /* ------------------------------------------------------------- arranque */
 
   useEffect(() => {
-    const guardadoNombre = localStorage.getItem('examen-web:activo') || ''
-    setNombre(guardadoNombre)
-    try {
-      const crudo = localStorage.getItem(llaveDeProyecto(P.id, slugificar(guardadoNombre)))
-      if (crudo) {
-        const g = JSON.parse(crudo) as Guardado
+    let vivo = true
+    ;(async () => {
+      let guardadoNombre = ''
+      let local: Guardado | null = null
+      try {
+        guardadoNombre = localStorage.getItem('examen-web:activo') || ''
+        const crudo = localStorage.getItem(llaveDeProyecto(P.id, slugificar(guardadoNombre)))
+        if (crudo) local = JSON.parse(crudo) as Guardado
+      } catch {
+        /* almacenamiento bloqueado: se sigue trabajando, solo que sin recordar */
+      }
+
+      // Si en la nube hay más misiones hechas (porque trabajó en otro
+      // computador), gana la nube. Igual que con el examen.
+      const s = slugificar(guardadoNombre)
+      const nube = s ? await cargarAvanceNube(P.id, s) : null
+      if (!vivo) return
+      const g = nube && (nube.hechas?.length ?? 0) > (local?.hechas?.length ?? 0) ? nube : local
+
+      setNombre(guardadoNombre)
+      if (g) {
         setCodigo({ ...VACIO, ...(g.codigo || {}) })
         setHechas(g.hechas || [])
         setTeclas(g.teclas || 0)
         setPegados(g.pegados || 0)
       }
-    } catch {
-      /* almacenamiento bloqueado: se sigue trabajando, solo que sin recordar */
+      setCargado(true)
+    })()
+    return () => {
+      vivo = false
     }
-    setCargado(true)
   }, [P.id])
 
   useEffect(() => {
     if (!cargado) return
+    const g: Guardado = { codigo, hechas, teclas, pegados }
     try {
-      const g: Guardado = { codigo, hechas, teclas, pegados }
       localStorage.setItem(llaveDeProyecto(P.id, slug), JSON.stringify(g))
     } catch {
       /* ídem */
     }
-  }, [cargado, codigo, hechas, teclas, pegados, slug, P.id])
+    // A la nube, sin martillarla en cada tecla: se espera a que haga una pausa.
+    // Un proyecto que solo se abrió y no se tocó no se manda.
+    if (!slug || (g.hechas.length === 0 && g.teclas === 0)) return
+    const t = setTimeout(() => guardarAvanceNube(P.id, slug, nombre, g), 2500)
+    return () => clearTimeout(t)
+  }, [cargado, codigo, hechas, teclas, pegados, slug, nombre, P.id])
 
   /* El resultado del modelo se monta una sola vez y se queda ahí, funcionando,
      para que el alumno pueda comparar y también jugar con él. */
@@ -164,6 +187,7 @@ export function TallerProyecto({ proyecto: P }: { proyecto: Proyecto }) {
     if (s.ok) {
       const nuevas = [...hechas, mision.id]
       setHechas(nuevas)
+      if (slug) registrarEvento(slug, 'mision', P.id, `${nuevas.length}/${P.misiones.length} · ${mision.titulo}`)
       setPistaAbierta(false)
       // La lista de chequeos era de la misión que acaba de pasar: dejarla ahí
       // confundiría, porque la tarjeta que se abre es ya la siguiente.
@@ -422,4 +446,28 @@ export function TallerProyecto({ proyecto: P }: { proyecto: Proyecto }) {
 
     </main>
   )
+}
+
+/* ----------------------------------------------------------------- nube --- */
+
+async function cargarAvanceNube(idProyecto: string, slug: string): Promise<Guardado | null> {
+  try {
+    const r = await fetch(
+      `/api/proyecto-avance?slug=${encodeURIComponent(slug)}&proyecto=${encodeURIComponent(idProyecto)}`,
+      { cache: 'no-store' },
+    )
+    const d = await r.json()
+    return d?.avance ?? null
+  } catch {
+    return null
+  }
+}
+
+function guardarAvanceNube(idProyecto: string, slug: string, nombre: string, g: Guardado) {
+  // Sin await: si no hay internet, el avance igual queda en el navegador.
+  fetch('/api/proyecto-avance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, nombre: nombre.trim(), proyecto: idProyecto, ...g }),
+  }).catch(() => {})
 }

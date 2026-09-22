@@ -33,14 +33,16 @@ export async function POST(req: Request) {
       error: 'Supabase no está configurado, así que no hay nada guardado en la nube.',
       alumnos: [],
       eventos: [],
+      proyectos: [],
     })
   }
 
   const db = supabaseAdmin()!
 
-  const [alumnos, eventos] = await Promise.all([
+  const [alumnos, eventos, proyectos] = await Promise.all([
     db.from('alumnos').select('*').order('puntos', { ascending: false }),
     db.from('eventos').select('*').order('creado', { ascending: false }).limit(200),
+    db.from('proyectos').select('slug, proyecto, nombre, hechas, teclas, pegados, actualizado'),
   ])
 
   if (alumnos.error) {
@@ -51,5 +53,10 @@ export async function POST(req: Request) {
     nube: true,
     alumnos: alumnos.data ?? [],
     eventos: eventos.data ?? [],
+    proyectos: proyectos.data ?? [],
+    // Si la tabla de proyectos aún no existe, el panel del examen sigue sirviendo.
+    ...(proyectos.error && {
+      error: `No se pudo leer el avance de los proyectos (${proyectos.error.message}). ¿Ya corriste la parte nueva de supabase/schema.sql?`,
+    }),
   })
 }
