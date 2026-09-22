@@ -17,8 +17,8 @@ const FILAS = 4
 const COLUMNAS = 8
 const INVASOR = 30
 const VIDAS = 3
-const BALAS_POR_CARGA = 6
-const BALAS_CON_EJEMPLO = 3
+const BALAS_POR_CARGA = 25
+const BALAS_CON_EJEMPLO = 18
 const DIBUJOS = ['🛸', '👾', '👽', '👾']
 
 interface Invasor {

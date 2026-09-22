@@ -49,7 +49,7 @@ turnándose el mismo computador. El contenido está todo en `src/lib/juegos.ts`.
 |---|---|---|
 | ⭕ Triqui de código | `/juegos/triqui` | La compu es X y pone ficha sin contestar. Para poner la O hay que contestar una pregunta de 3 opciones en 15 segundos. Si falla, se le muestra la buena y pierde el turno. 41 preguntas. |
 | 🃏 Parejas de código | `/juegos/parejas` | 16 cartas: 8 con lo que se ve en la página, 8 con el código que lo hace. Al encontrar pareja sale una explicación corta. 22 parejas, se sacan 8 por partida. |
-| 👾 Invasores del código | `/juegos/invasores` | El láser arranca vacío: se carga escribiendo 2 o 3 líneas de código (12 retos). El juego se congela mientras se escribe. Cada carga da 6 disparos, o 3 si pidió ver el ejemplo. |
+| 👾 Invasores del código | `/juegos/invasores` | El láser arranca vacío: se carga escribiendo 2 o 3 líneas de código (12 retos). El juego se congela mientras se escribe. Cada carga da 25 disparos, o 18 si pidió ver el ejemplo: la idea es que se la pasen jugando, no recargando. |
 
 Las dos compus (la del triqui y la de las parejas) fallan a propósito de vez en cuando:
 contra una compu perfecta un niño solo empata, y eso no divierte a nadie.
