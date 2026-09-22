@@ -32,6 +32,7 @@ conectar Supabase (ver abajo).
 | `/proyecto` | Índice de los proyectos guiados, con el avance de cada uno. |
 | `/proyecto/p1` … `/proyecto/p8` | El taller: código del modelo, terminal del alumno y misiones. |
 | `/profesor` | Panel del profesor. Pide la clave de `PROFESOR_CLAVE`. |
+| `/juegos` | Los tres juegos de recreo: triqui, parejas e invasores. |
 | `/verificar` | Autodiagnóstico: corre las 75 soluciones de referencia contra sus propias pruebas. |
 | `/verificar-proyecto` | Autodiagnóstico de los proyectos guiados: resuelve sus 58 misiones y las revisa. |
 
@@ -135,6 +136,11 @@ Tres por sección (3 en HTML, 3 en CSS, 3 en JS). En cada uso el alumno escoge:
 
 Los puntos base van de 100 (fácil) a 350 (difícil), con +50% por acertar al primer
 intento y un multiplicador por racha. La racha se rompe al fallar o al pedir ayuda.
+
+## Dónde vamos
+
+En `docs/ESTADO.md` está el estado del proyecto: lo último que se hizo, lo que falta y
+el mapa del código.
 
 ## Conectar Supabase (opcional)
 
