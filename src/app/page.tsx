@@ -158,7 +158,7 @@ export default function Entrada() {
           <h2 className="text-sm font-bold text-[#e2e8ff]">🎮 Juegos de código</h2>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
             Triqui con preguntas, parejas de código y una invasión espacial donde el láser se carga escribiendo
-            código. Contra la compu o contra un compañero.
+            código y un buscaminas. Contra la compu o contra un compañero.
           </p>
         </div>
         <a href="/juegos" className="boton boton-primario">

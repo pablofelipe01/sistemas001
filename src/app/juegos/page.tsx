@@ -22,6 +22,13 @@ const JUEGOS = [
     texto: 'Defiende la base de los invasores. Tu láser se carga escribiendo 2 o 3 líneas de código.',
     color: '#f472b6',
   },
+  {
+    href: '/juegos/buscaminas',
+    emoji: '💣',
+    titulo: 'Buscaminas de código',
+    texto: 'El de siempre: los números dicen cuántas minas hay cerca. Si pisas una, la desactivas contestando una pregunta.',
+    color: '#fbbf24',
+  },
 ]
 
 export default function Juegos() {
@@ -33,12 +40,12 @@ export default function Juegos() {
           Hoy se <span className="text-[#fbbf24]">juega</span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[#9fb0d4]">
-          Tres juegos para repasar HTML, CSS y JavaScript sin darse cuenta. Cada uno se puede jugar contra la compu o
+          Cuatro juegos para repasar HTML, CSS y JavaScript sin darse cuenta. Casi todos se pueden jugar contra la compu o
           contra un compañero en el mismo computador.
         </p>
       </header>
 
-      <ul className="grid gap-4 sm:grid-cols-3">
+      <ul className="grid gap-4 sm:grid-cols-2">
         {JUEGOS.map((j) => (
           <li key={j.href}>
             <Link

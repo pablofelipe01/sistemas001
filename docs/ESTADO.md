@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 22 de septiembre de 2026 · commit `5138b27`
+Última actualización: 25 de septiembre de 2026
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -14,14 +14,28 @@ Una app de Next.js para el salón, con tres partes:
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los juegos** (`/juegos`): tres juegos de recreo para repasar sin darse cuenta.
+3. **Los juegos** (`/juegos`): cuatro juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen y
 en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (22 de septiembre de 2026)
+## Lo último que se hizo (25 de septiembre de 2026)
+
+### El buscaminas (`/juegos/buscaminas`)
+
+El de los 90, a pedido del profesor. Tres niveles (9×9 con 10 minas, 12×12 con 24,
+16×16 con 40), el primer toque nunca explota, se abre en cascada donde no hay minas,
+bandera con clic derecho o con el botón "modo bandera" (para los que usan el
+trackpad), y tocar un número con todas sus banderas abre lo de alrededor.
+
+El toque de código: si pisa una mina, puede desactivarla contestando una pregunta del
+triqui (mismas `PREGUNTAS`, 20 segundos). Hay 3 rescates por partida y se gastan aunque
+falle. El reloj se detiene mientras piensa, y el récord por nivel queda en
+`localStorage`. No tiene modo de dos jugadores: es un juego de uno, como el original.
+
+## Lo que se hizo el 22 de septiembre de 2026
 
 ### 1. El profesor ya ve el avance de los proyectos
 
@@ -42,7 +56,7 @@ Antes el avance de los proyectos guiados vivía solo en el navegador del alumno
 
 ### 2. Los juegos de recreo
 
-Tres juegos en `/juegos`, todos con dos modos: contra la compu o dos jugadores
+Tres juegos en `/juegos` (el buscaminas llegó después), todos con dos modos: contra la compu o dos jugadores
 turnándose el mismo computador. El contenido está todo en `src/lib/juegos.ts`.
 
 | Juego | Ruta | Cómo funciona |

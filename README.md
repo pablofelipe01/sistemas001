@@ -32,7 +32,7 @@ conectar Supabase (ver abajo).
 | `/proyecto` | Índice de los proyectos guiados, con el avance de cada uno. |
 | `/proyecto/p1` … `/proyecto/p8` | El taller: código del modelo, terminal del alumno y misiones. |
 | `/profesor` | Panel del profesor. Pide la clave de `PROFESOR_CLAVE`. |
-| `/juegos` | Los tres juegos de recreo: triqui, parejas e invasores. |
+| `/juegos` | Los cuatro juegos de recreo: triqui, parejas, invasores y buscaminas. |
 | `/verificar` | Autodiagnóstico: corre las 75 soluciones de referencia contra sus propias pruebas. |
 | `/verificar-proyecto` | Autodiagnóstico de los proyectos guiados: resuelve sus 58 misiones y las revisa. |
 
