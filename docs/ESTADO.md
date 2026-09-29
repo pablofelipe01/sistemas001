@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 25 de septiembre de 2026
+Última actualización: 29 de septiembre de 2026
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -14,14 +14,35 @@ Una app de Next.js para el salón, con tres partes:
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los juegos** (`/juegos`): cuatro juegos de recreo para repasar sin darse cuenta.
+3. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen y
 en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (25 de septiembre de 2026)
+## Lo último que se hizo (29 de septiembre de 2026)
+
+### El tetris (`/juegos/tetris`)
+
+A pedido del profesor. Tablero de 10×20, las 7 fichas (salen de a bolsas de siete),
+sombra de dónde va a caer, y cada 10 líneas sube el nivel y todo cae más rápido. Se
+juega con flechas (o WASD), Espacio suelta la ficha, P pausa, y hay botones en
+pantalla para quien no tenga teclado. Se pausa solo si el alumno se va a otra ventana.
+
+El toque de código, con las mismas `PREGUNTAS` del triqui (15 segundos, se contesta con
+clic o con las teclas 1, 2 y 3):
+
+- **🧊 Congelar (tecla C):** una vez por ficha. Si contesta bien, la ficha se queda
+  quieta en el aire hasta que la suelte, y gana 50 puntos. Si contesta mal o se acaba
+  el tiempo, esa ficha se pone en **🚀 turbo** (un renglón cada 60 ms).
+- **📣 Pregunta sorpresa** cada 5 fichas, la pida o no, con las mismas reglas.
+
+Récord de puntos en `localStorage`. Se probó en un Chromium sin pantalla (congelar,
+turbo, sorpresas, perder y récord); falta jugarlo con niños y ver si el turbo es muy
+castigo.
+
+## Lo que se hizo el 25 de septiembre de 2026
 
 ### El buscaminas (`/juegos/buscaminas`)
 
@@ -56,7 +77,7 @@ Antes el avance de los proyectos guiados vivía solo en el navegador del alumno
 
 ### 2. Los juegos de recreo
 
-Tres juegos en `/juegos` (el buscaminas llegó después), todos con dos modos: contra la compu o dos jugadores
+Tres juegos en `/juegos` (el buscaminas y el tetris llegaron después), todos con dos modos: contra la compu o dos jugadores
 turnándose el mismo computador. El contenido está todo en `src/lib/juegos.ts`.
 
 | Juego | Ruta | Cómo funciona |

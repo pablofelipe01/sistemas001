@@ -29,6 +29,13 @@ const JUEGOS = [
     texto: 'El de siempre: los números dicen cuántas minas hay cerca. Si pisas una, la desactivas contestando una pregunta.',
     color: '#fbbf24',
   },
+  {
+    href: '/juegos/tetris',
+    emoji: '🧱',
+    titulo: 'Tetris de código',
+    texto: 'Acomoda las fichas y borra líneas. Contesta bien y la ficha se congela en el aire; contesta mal y cae en turbo.',
+    color: '#a78bfa',
+  },
 ]
 
 export default function Juegos() {
@@ -40,7 +47,7 @@ export default function Juegos() {
           Hoy se <span className="text-[#fbbf24]">juega</span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[#9fb0d4]">
-          Cuatro juegos para repasar HTML, CSS y JavaScript sin darse cuenta. Casi todos se pueden jugar contra la compu o
+          Cinco juegos para repasar HTML, CSS y JavaScript sin darse cuenta. Casi todos se pueden jugar contra la compu o
           contra un compañero en el mismo computador.
         </p>
       </header>
