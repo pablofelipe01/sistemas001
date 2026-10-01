@@ -181,3 +181,8 @@ Cada reto vive en `src/lib/challenges/{html,css,js}.ts` y se explica solo:
 ```
 
 Después de cambiar cualquier cosa, correr `/verificar`.
+
+## Clase de GitHub
+
+Para practicar issues, forks y pull requests está la carpeta [`clase-github/`](clase-github/).
+Antes de empezar, lee [`CONTRIBUTING.md`](CONTRIBUTING.md): ahí está el paso a paso.

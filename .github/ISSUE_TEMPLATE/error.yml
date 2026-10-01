@@ -1,0 +1,40 @@
+name: Error
+description: Cuéntanos algo que no funcionó como esperabas.
+title: "Error: "
+labels: ["error"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias por avisar! Encontrar errores también es programar. 🐞
+        **Recuerda:** este repositorio es público. No escribas datos personales ni contraseñas.
+  - type: textarea
+    id: que-paso
+    attributes:
+      label: ¿Qué pasó?
+      description: Describe lo que viste.
+    validations:
+      required: true
+  - type: input
+    id: donde
+    attributes:
+      label: ¿En qué pantalla o reto?
+      placeholder: "Por ejemplo: /examen o html-07"
+    validations:
+      required: false
+  - type: textarea
+    id: esperado
+    attributes:
+      label: ¿Qué esperabas que pasara?
+    validations:
+      required: false
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para repetirlo
+      placeholder: |
+        1. Entré a...
+        2. Hice clic en...
+        3. Apareció...
+    validations:
+      required: false
