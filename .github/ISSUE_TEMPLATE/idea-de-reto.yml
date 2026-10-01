@@ -1,0 +1,43 @@
+name: Idea de reto
+description: Propón un reto nuevo para la Arena de Código.
+title: "Idea de reto: "
+labels: ["idea-de-reto"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias por tu idea! 💡
+        **Recuerda:** este repositorio es público. No escribas tu nombre completo, tu colegio, tu ciudad, fotos ni contraseñas.
+  - type: dropdown
+    id: lenguaje
+    attributes:
+      label: Lenguaje
+      description: ¿De qué lenguaje es el reto?
+      options:
+        - HTML
+        - CSS
+        - JavaScript
+    validations:
+      required: true
+  - type: textarea
+    id: enunciado
+    attributes:
+      label: Enunciado
+      description: Explica qué tiene que hacer quien resuelva el reto.
+      placeholder: "Por ejemplo: haz una lista con tus tres comidas favoritas."
+    validations:
+      required: true
+  - type: textarea
+    id: ejemplo
+    attributes:
+      label: Ejemplo de solución o de resultado esperado
+      description: Muestra el código de la solución o cómo debería verse el resultado.
+    validations:
+      required: false
+  - type: textarea
+    id: pista
+    attributes:
+      label: Pista
+      description: Una ayudita para quien se quede atascado.
+    validations:
+      required: false
