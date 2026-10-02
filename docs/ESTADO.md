@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 29 de septiembre de 2026
+Última actualización: 2 de octubre de 2026
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -9,19 +9,67 @@ medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
 
 ## Lo que hay, en una frase
 
-Una app de Next.js para el salón, con tres partes:
+Una app de Next.js para el salón, con cuatro partes:
 
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
+3. **Los cursos** (`/cursos`): por ahora uno, Python desde cero (10 lecciones × 5 retos).
+4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
-Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen y
-en los proyectos.
+Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
+en el curso de Python y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (29 de septiembre de 2026)
+## Lo último que se hizo (2 de octubre de 2026)
+
+### El curso de Python (`/cursos/python`)
+
+A pedido del profesor: primera vez en Python para niños que ya vieron HTML, CSS y JS,
+pensado para unas 4 horas (245 minutos sumando lo calculado por lección). 10 lecciones,
+cada una con una explicación corta y 5 retos que se resuelven en orden; la lección
+siguiente se abre al terminar la anterior. Las explicaciones ponen lado a lado el
+JavaScript que ya saben y el Python nuevo, y sus ejemplos se pueden correr pero no copiar.
+
+Lecciones: print · operaciones · variables · texto y f-strings · input() · if/elif/else ·
+for y range · while · listas · funciones (cierra con piedra, papel o tijera).
+
+Cómo funciona por dentro:
+
+- **Python de verdad en el navegador** con Pyodide (v314.0.7 desde jsdelivr), dentro de
+  un Web Worker *de tipo módulo* (`public/python/worker.js`; con `importScripts` Chrome
+  no lo deja cargar). La primera carga baja unos megas; después queda en caché.
+- **Ciclos infinitos:** si un programa no contesta en 5 segundos se apaga el worker y
+  se levanta otro. Un `print` dentro de un `while True` se corta antes, a los 20.000
+  caracteres. Las dos cosas le dan al niño una pista, no un cuelgue.
+- **input():** en la página no se puede esperar al teclado, así que el alumno escribe
+  las respuestas antes de correr, en unas cajitas bajo el editor.
+- **La revisión** (`src/lib/cursos/calificar.ts`) corre el programa con varios juegos
+  de respuestas y compara la salida "suave" (sin mayúsculas, tildes ni espacios de más),
+  evalúa expresiones de Python después (`doble(4)` → `8`) y mira el código sin comentarios.
+- **Los errores de Python se traducen** a pistas en español
+  (`src/lib/cursos/errores-python.ts`), y cazan los vicios de JavaScript: console.log,
+  let, llaves, &&, else if, true en minúscula, push.
+- **Correr** no cuenta como intento; **Comprobar** sí. Mismo guardia contra pegar del
+  examen (la terminal ahora acepta `python`, con sangría de 4 espacios).
+- **Se guarda** en el navegador y en la tabla nueva `cursos` de Supabase (ya creada en
+  `fxsimxiazztmuroivqei`, y en `supabase/schema.sql`): retos hechos, intentos por reto,
+  pistas abiertas, teclas, pegados y el último código de cada reto.
+- **Panel del profesor:** tabla nueva con L1…L10 por alumno, una marca de "atascado"
+  (5+ intentos en el reto donde va), los 3 retos que más le cuestan al salón y, al tocar
+  un alumno, reto por reto y **el código que lleva en el reto donde está pegado**.
+- **`/verificar-curso`**: corre las 50 soluciones (deben pasar), los 50 códigos
+  iniciales (no deben pasar solos) y los 18 ejemplos. Hoy: 68 de 68 bien.
+
+Se probó en Chrome: la lección 1 completa con un error de JavaScript de por medio, el
+while infinito de la lección 8 y el panel recibiendo el avance (el alumno de prueba ya se
+borró de Supabase). Falta: **probarlo con niños** — ver si 5 retos por lección alcanzan
+para 25 minutos y si las cajitas de input() se entienden sin explicarlas — y ver cuánto
+tarda la primera carga de Python con el internet del colegio (conviene abrir
+`/cursos/python` en cada computador un rato antes de la clase).
+
+## Lo que se hizo el 29 de septiembre de 2026
 
 ### El tetris (`/juegos/tetris`)
 
@@ -108,13 +156,16 @@ contra una compu perfecta un niño solo empata, y eso no divierte a nadie.
 src/lib/challenges/     Los 75 retos del examen (html.ts, css.ts, js.ts)
 src/lib/proyectos.ts    Los 8 proyectos guiados con sus misiones
 src/lib/juegos.ts       Preguntas, parejas y códigos de carga de los juegos
+src/lib/cursos/         Los cursos: python.ts (contenido), calificar.ts, errores-python.ts, motor-python.ts
+public/python/          El worker de Pyodide y corredor.py, que ejecuta el código del alumno
+src/components/cursos/  TallerCurso (la lección), MapaDelCurso, la tabla del panel del profesor
 src/lib/progress.ts     Progreso del examen: puntos, comodines, insignias
 src/lib/storage.ts      Guardar local + nube + fusión de los dos
 src/components/Terminal.tsx        La terminal que no deja pegar (CodeMirror)
 src/components/TallerProyecto.tsx  El taller de los proyectos guiados
 src/components/ElegirModo.tsx      Portada común de los tres juegos
-src/app/api/            progreso, proyecto-avance, evento, ranking, profesor
-supabase/schema.sql     Las tres tablas: alumnos, eventos, proyectos
+src/app/api/            progreso, proyecto-avance, curso-avance, evento, ranking, profesor
+supabase/schema.sql     Las cuatro tablas: alumnos, eventos, proyectos, cursos
 ```
 
 ## Cosas que hay que saber
@@ -125,7 +176,7 @@ supabase/schema.sql     Las tres tablas: alumnos, eventos, proyectos
 - **Las tablas van con RLS activo y sin políticas**, a propósito: solo el servidor, con la
   service role key, puede tocarlas. Como los alumnos entran con el puro nombre, dejar
   escribir desde el navegador sería dejar que cualquiera editara el progreso de otro.
-- **`/verificar` y `/verificar-proyecto`** son el autodiagnóstico: resuelven todo con la
+- **`/verificar`, `/verificar-proyecto` y `/verificar-curso`** son el autodiagnóstico: resuelven todo con la
   llave de respuestas y le corren sus propias pruebas. Vale la pena abrirlas cada vez que
   se toque un reto o una misión.
 - **El identificador del alumno** es su nombre normalizado (`slugificar`). Si un niño

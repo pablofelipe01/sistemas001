@@ -62,8 +62,27 @@ create table if not exists public.proyectos (
 comment on table  public.proyectos        is 'Un renglón por alumno y proyecto guiado: misiones hechas, teclas, pegados bloqueados y el código.';
 comment on column public.proyectos.hechas is 'Los id de las misiones cumplidas, en orden.';
 
+create table if not exists public.cursos (
+  slug         text not null,
+  curso        text not null,
+  nombre       text not null,
+  hechos       jsonb   not null default '[]'::jsonb,
+  intentos     jsonb   not null default '{}'::jsonb,
+  pistas       jsonb   not null default '[]'::jsonb,
+  teclas       integer not null default 0,
+  pegados      integer not null default 0,
+  codigo       jsonb   not null default '{}'::jsonb,
+  actualizado  timestamptz not null default now(),
+  primary key (slug, curso)
+);
+
+comment on table  public.cursos          is 'Un renglón por alumno y curso (hoy: python): retos resueltos, intentos, pistas y el último código de cada reto.';
+comment on column public.cursos.hechos   is 'Los id de los retos resueltos, en el orden en que los resolvió (py-3-2 = lección 3, reto 2).';
+comment on column public.cursos.intentos is 'Cuántas veces le dio Comprobar a cada reto: { "py-3-2": 4 }.';
+
 alter table public.alumnos   enable row level security;
 alter table public.eventos   enable row level security;
 alter table public.proyectos enable row level security;
+alter table public.cursos    enable row level security;
 
 -- Sin políticas a propósito: el acceso anónimo queda cerrado por completo.
