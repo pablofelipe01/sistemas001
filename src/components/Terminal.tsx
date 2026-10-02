@@ -17,8 +17,12 @@ import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import { html as htmlLang } from '@codemirror/lang-html'
 import { css as cssLang } from '@codemirror/lang-css'
 import { javascript as jsLang } from '@codemirror/lang-javascript'
+import { python as pyLang } from '@codemirror/lang-python'
 import { tags as t } from '@lezer/highlight'
 import type { Lang } from '@/lib/types'
+
+/** Los lenguajes del examen, más Python para los cursos. */
+export type LangEditor = Lang | 'python'
 
 /** Marca los cambios que hace la app (una ayuda, reiniciar el reto) para que el guardia los deje pasar. */
 const CAMBIO_DE_LA_APP = Annotation.define<boolean>()
@@ -33,7 +37,7 @@ export interface TerminalHandle {
 }
 
 interface Props {
-  lang: Lang
+  lang: LangEditor
   /** Contenido inicial. Cambiar de reto debe remontar el componente con key. */
   inicial: string
   onCambio: (texto: string) => void
@@ -84,18 +88,20 @@ export const coloresSintaxis = HighlightStyle.define([
   { tag: [t.invalid], color: '#fb7185' },
 ])
 
-export function extensionDeLenguaje(lang: Lang) {
+export function extensionDeLenguaje(lang: LangEditor) {
   // autoCloseTags a propósito en false: cerrar la etiqueta sola le regalaría al
   // alumno justo lo que el reto le está pidiendo aprender.
   if (lang === 'html') return htmlLang({ autoCloseTags: false })
   if (lang === 'css') return cssLang()
+  if (lang === 'python') return pyLang()
   return jsLang()
 }
 
-const MARCADOR: Record<Lang, string> = {
+const MARCADOR: Record<LangEditor, string> = {
   html: 'Escribe aquí tu HTML…',
   css: 'Escribe aquí tu CSS…',
   js: 'Escribe aquí tu JavaScript…',
+  python: 'Escribe aquí tu Python…',
 }
 
 export const Terminal = forwardRef<TerminalHandle, Props>(function Terminal(
@@ -228,7 +234,8 @@ export const Terminal = forwardRef<TerminalHandle, Props>(function Terminal(
           drawSelection(),
           history(),
           indentOnInput(),
-          indentUnit.of('  '),
+          // En Python la sangría es parte del lenguaje y la costumbre son 4 espacios.
+          indentUnit.of(lang === 'python' ? '    ' : '  '),
           bracketMatching(),
           closeBrackets(),
           // Autocompletado NO: sugerir etiquetas sería darles media respuesta.

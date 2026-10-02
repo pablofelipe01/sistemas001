@@ -4,8 +4,7 @@ import { useEffect, useRef } from 'react'
 import { EditorState } from '@codemirror/state'
 import { EditorView, lineNumbers } from '@codemirror/view'
 import { syntaxHighlighting } from '@codemirror/language'
-import { coloresSintaxis, extensionDeLenguaje, temaTerminal } from './Terminal'
-import type { Lang } from '@/lib/types'
+import { coloresSintaxis, extensionDeLenguaje, temaTerminal, type LangEditor } from './Terminal'
 
 /**
  * El código del modelo: se lee con los ojos, se pasa con los dedos.
@@ -29,7 +28,7 @@ export function CodigoModelo({
   codigo,
   onIntentoDeCopia,
 }: {
-  lang: Lang
+  lang: LangEditor
   codigo: string
   onIntentoDeCopia: () => void
 }) {

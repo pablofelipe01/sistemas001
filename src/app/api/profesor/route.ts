@@ -34,15 +34,18 @@ export async function POST(req: Request) {
       alumnos: [],
       eventos: [],
       proyectos: [],
+      cursos: [],
     })
   }
 
   const db = supabaseAdmin()!
 
-  const [alumnos, eventos, proyectos] = await Promise.all([
+  const [alumnos, eventos, proyectos, cursos] = await Promise.all([
     db.from('alumnos').select('*').order('puntos', { ascending: false }),
     db.from('eventos').select('*').order('creado', { ascending: false }).limit(200),
     db.from('proyectos').select('slug, proyecto, nombre, hechas, teclas, pegados, actualizado'),
+    // El código va completo: el panel lo muestra para ayudar al que está atascado.
+    db.from('cursos').select('slug, curso, nombre, hechos, intentos, pistas, teclas, pegados, codigo, actualizado'),
   ])
 
   if (alumnos.error) {
@@ -54,9 +57,13 @@ export async function POST(req: Request) {
     alumnos: alumnos.data ?? [],
     eventos: eventos.data ?? [],
     proyectos: proyectos.data ?? [],
+    cursos: cursos.data ?? [],
     // Si la tabla de proyectos aún no existe, el panel del examen sigue sirviendo.
     ...(proyectos.error && {
       error: `No se pudo leer el avance de los proyectos (${proyectos.error.message}). ¿Ya corriste la parte nueva de supabase/schema.sql?`,
+    }),
+    ...(cursos.error && {
+      error: `No se pudo leer el avance de los cursos (${cursos.error.message}). ¿Ya corriste la parte nueva de supabase/schema.sql?`,
     }),
   })
 }

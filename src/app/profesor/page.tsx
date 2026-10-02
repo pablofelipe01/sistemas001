@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react'
 import { ALL_CHALLENGES, SECCIONES, TOTAL } from '@/lib/challenges'
 import type { Progreso } from '@/lib/progress'
 import { PROYECTOS, proyectoPorId } from '@/lib/proyectos'
+import { TablaCursosProfesor, nombreDeReto, type FilaCurso } from '@/components/cursos/TablaCursosProfesor'
 
 interface FilaAlumno {
   slug: string
@@ -52,6 +53,7 @@ export default function Profesor() {
     alumnos: FilaAlumno[]
     eventos: Evento[]
     proyectos?: AvanceProyecto[]
+    cursos?: FilaCurso[]
     nube: boolean
   } | null>(null)
   const [error, setError] = useState('')
@@ -87,8 +89,8 @@ export default function Profesor() {
         <div className="panel p-7">
           <h1 className="mb-1 text-xl font-black">Panel del profesor</h1>
           <p className="mb-5 text-xs leading-relaxed text-[#7f8fb3]">
-            Aquí ves cómo va todo el salón: quién va en qué reto, cuántos intentos lleva, qué comodines gastó y en qué
-            momento alguien intentó pegar código.
+            Aquí ves cómo va todo el salón: quién va en qué reto, cuántos intentos lleva, qué comodines gastó, cómo va
+            en los cursos y en qué momento alguien intentó pegar código.
           </p>
           <input
             type="password"
@@ -198,6 +200,8 @@ export default function Profesor() {
         </div>
       )}
 
+      <TablaCursosProfesor filas={datos.cursos ?? []} />
+
       <TablaProyectos avances={datos.proyectos ?? []} />
 
       <section className="panel p-5">
@@ -222,7 +226,9 @@ export default function Profesor() {
                   {NOMBRE_EVENTO[e.tipo] ?? e.tipo}
                 </span>
                 <span className="text-[#4b5b80]">
-                  {e.reto && proyectoPorId(e.reto) ? `Proyecto ${proyectoPorId(e.reto)!.numero}` : e.reto}
+                  {e.reto && proyectoPorId(e.reto)
+                    ? `Proyecto ${proyectoPorId(e.reto)!.numero}`
+                    : (e.reto && nombreDeReto(e.reto)) || e.reto}
                 </span>
                 {e.detalle && <span className="text-[#3f5074]">· {e.detalle}</span>}
               </li>
