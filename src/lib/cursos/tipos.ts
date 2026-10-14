@@ -69,6 +69,10 @@ export interface Curso {
   descripcion: string
   /** Para el editor: qué resaltado usa. */
   lenguaje: 'python'
+  /** El id del curso que hay que terminar antes de abrir este. */
+  requiere?: string
+  /** Lo que se le dice al alumno al terminar todo el curso. */
+  despedida?: string
   lecciones: Leccion[]
 }
 

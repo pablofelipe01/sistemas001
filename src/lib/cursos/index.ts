@@ -1,7 +1,8 @@
 import { CURSO_PYTHON } from './python'
+import { CURSO_PYTHON_AVANZADO } from './python-avanzado'
 import { avanceVacio, type AvanceCurso, type Curso, type Leccion } from './tipos'
 
-export const CURSOS: Curso[] = [CURSO_PYTHON]
+export const CURSOS: Curso[] = [CURSO_PYTHON, CURSO_PYTHON_AVANZADO]
 
 export function cursoPorId(id: string) {
   return CURSOS.find((c) => c.id === id)
@@ -18,6 +19,15 @@ export function totalRetos(curso: Curso) {
 /** Minutos de todo el curso, sumando lo que se calculó para cada lección. */
 export function minutosDelCurso(curso: Curso) {
   return curso.lecciones.reduce((n, l) => n + l.minutos, 0)
+}
+
+/** El curso que se abre al terminar este, si hay. */
+export function cursoSiguiente(curso: Curso) {
+  return CURSOS.find((c) => c.requiere === curso.id)
+}
+
+export function cursoCompleto(curso: Curso, avance: Pick<AvanceCurso, 'hechos'>) {
+  return curso.lecciones.every((l) => retosHechos(l, avance) === l.retos.length)
 }
 
 export function retosHechos(leccion: Leccion, avance: Pick<AvanceCurso, 'hechos'>) {

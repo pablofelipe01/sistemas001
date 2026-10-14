@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect } from 'react'
-import { useAvanceCurso } from './useAvanceCurso'
+import { CursoCerrado } from './CursoCerrado'
+import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
 import { leccionAbierta, leccionActual, minutosDelCurso, retosHechos, totalRetos } from '@/lib/cursos'
 import { motorPython } from '@/lib/cursos/motor-python'
 import type { Curso } from '@/lib/cursos/tipos'
@@ -10,6 +11,7 @@ import type { Curso } from '@/lib/cursos/tipos'
 /** La lista de lecciones del curso: cuáles van hechas, cuál sigue y cuáles están cerradas. */
 export function MapaDelCurso({ curso }: { curso: Curso }) {
   const { nombre, avance, cargado } = useAvanceCurso(curso.id)
+  const { previo, listo, abierto } = useCursoPrevio(curso)
   const actual = leccionActual(curso, avance)
   const total = totalRetos(curso)
   const horas = Math.round(minutosDelCurso(curso) / 60)
@@ -18,6 +20,8 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
   useEffect(() => {
     void motorPython().arrancar().catch(() => {})
   }, [])
+
+  if (previo && listo && !abierto) return <CursoCerrado curso={curso} previo={previo} />
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-12">
@@ -61,7 +65,8 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
       <ol className="space-y-3">
         {curso.lecciones.map((l, i) => {
           const hechos = retosHechos(l, avance)
-          const abierta = cargado && leccionAbierta(curso, i, avance)
+          // Mientras se averigua si el curso de antes está terminado, todo se ve cerrado.
+          const abierta = cargado && listo && abierto && leccionAbierta(curso, i, avance)
           const terminada = hechos === l.retos.length
           const esLaActual = cargado && i === actual && !terminada
           const contenido = (

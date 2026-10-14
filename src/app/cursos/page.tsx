@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CURSOS, cargarAvanceLocal, minutosDelCurso, totalRetos } from '@/lib/cursos'
+import { CURSOS, cargarAvanceLocal, cursoCompleto, cursoPorId, minutosDelCurso, totalRetos } from '@/lib/cursos'
 import { slugificar } from '@/lib/progress'
 
 export default function Cursos() {
   const [hechos, setHechos] = useState<Record<string, number>>({})
+  // Los cursos terminados en este navegador. Si lo terminó en otro computador,
+  // el mapa del curso lo averigua en la nube y lo deja entrar igual.
+  const [completos, setCompletos] = useState<string[]>([])
 
   useEffect(() => {
     let slug = ''
@@ -15,7 +18,9 @@ export default function Cursos() {
     } catch {
       /* sin almacenamiento, se ve igual pero sin avance */
     }
-    setHechos(Object.fromEntries(CURSOS.map((c) => [c.id, cargarAvanceLocal(c.id, slug).hechos.length])))
+    const avances = CURSOS.map((c) => [c, cargarAvanceLocal(c.id, slug)] as const)
+    setHechos(Object.fromEntries(avances.map(([c, a]) => [c.id, a.hechos.length])))
+    setCompletos(avances.filter(([c, a]) => cursoCompleto(c, a)).map(([c]) => c.id))
   }, [])
 
   return (
@@ -35,6 +40,8 @@ export default function Cursos() {
         {CURSOS.map((c) => {
           const total = totalRetos(c)
           const llevo = hechos[c.id] ?? 0
+          const previo = c.requiere ? cursoPorId(c.requiere) : undefined
+          const cerrado = previo && !completos.includes(previo.id) && llevo === 0
           return (
             <li key={c.id}>
               <Link href={`/cursos/${c.id}`} className="panel block p-6 transition hover:border-[#2f4067] hover:bg-[#101a2e]">
@@ -47,6 +54,11 @@ export default function Cursos() {
                       {c.emoji} {c.titulo}
                     </h2>
                     <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[#8fa1c6]">{c.descripcion}</p>
+                    {cerrado && (
+                      <p className="mt-2 text-xs font-bold text-[#fbbf24]">
+                        🔒 Se abre al terminar {previo.emoji} {previo.titulo}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="etiqueta">Retos</p>

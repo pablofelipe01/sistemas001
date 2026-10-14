@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 2 de octubre de 2026
+Última actualización: 14 de octubre de 2026
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -14,15 +14,57 @@ Una app de Next.js para el salón, con cuatro partes:
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los cursos** (`/cursos`): por ahora uno, Python desde cero (10 lecciones × 5 retos).
+3. **Los cursos** (`/cursos`): Python desde cero y Python avanzado (10 lecciones × 5 retos cada uno).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
-en el curso de Python y en los proyectos.
+en los cursos de Python y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (2 de octubre de 2026)
+## Lo último que se hizo (14 de octubre de 2026)
+
+### Python avanzado (`/cursos/python-avanzado`)
+
+A pedido del profesor: la segunda parte, como curso aparte, con el mismo formato
+(10 lecciones × 5 retos, unas 4 horas y media). El contenido está en
+`src/lib/cursos/python-avanzado.ts`; los id son `pya-N` y `pya-N-M`, para no chocar
+con los de la primera parte.
+
+Lecciones: listas a fondo (rebanadas, in, sort, remove/pop, enumerate) · texto a fondo
+(split, join, replace, count) · diccionarios · recorrer diccionarios (items, contar,
+listas de diccionarios) · tuplas y tableros (cierra con un `gano()` de triqui) · listas
+en una línea (comprensiones) · funciones a fondo (valores por defecto, devolver varios,
+lo local) · recursión · try/except con random y math · clases (cierra con una mascota
+virtual).
+
+- **Se abre al terminar Python desde cero** (campo `requiere` del curso). Se mira el
+  avance del primer curso en el navegador y, si ahí no está completo, en la nube, por si
+  el alumno lo terminó en otro computador. Cerrado, el mapa y las lecciones muestran
+  un candado con el botón para ir al primero; `/cursos` avisa con "🔒 Se abre al
+  terminar…". Al terminar el primero, la tarjeta final ofrece "Sigue con 🚀 Python
+  avanzado".
+- **El azar no rompe la revisión:** los retos con random (el dado, la jugada de la
+  compu) se prueban llamando la función cientos de veces y mirando que salga de todo y
+  nada por fuera.
+- **Las clases se prueban desde una expresión** con un `lambda` que crea el objeto,
+  llama los métodos y devuelve lo último (ver `enMascota`).
+- **Pistas de error nuevas** en `errores-python.ts`: KeyError, `perro.nombre` en un
+  diccionario, llaves sin comillas, `this`, `new`, métodos sin self, `__init__` mal
+  escrito, falta `import random`, `randint` sin `random.`, tuplas y textos que no se
+  cambian, None después de `sort()`, desempacar de más o de menos, variables locales y
+  recursión sin caso base. Además, un diccionario que sigue en el otro renglón (`d = {`)
+  ya no se confunde con una llave de JavaScript.
+- **No hubo que tocar Supabase:** la tabla `cursos` ya guarda un renglón por alumno y por
+  curso, y el panel del profesor muestra la tabla nueva solo.
+
+Se probó: `/verificar-curso` da 141 de 141 (los 68 de antes, más 50 soluciones y 23
+ejemplos nuevos), las pistas de error contra los errores reales de Pyodide, y en un
+Chromium sin pantalla el candado, el desbloqueo y un reto escrito a mano (primero mal y
+después bien). Falta: **probarlo con niños**, sobre todo recursión (L8) y clases (L10),
+que son los saltos más grandes; si cuestan mucho, se pueden partir en dos lecciones.
+
+## Lo que se hizo el 2 de octubre de 2026
 
 ### El curso de Python (`/cursos/python`)
 
@@ -156,7 +198,7 @@ contra una compu perfecta un niño solo empata, y eso no divierte a nadie.
 src/lib/challenges/     Los 75 retos del examen (html.ts, css.ts, js.ts)
 src/lib/proyectos.ts    Los 8 proyectos guiados con sus misiones
 src/lib/juegos.ts       Preguntas, parejas y códigos de carga de los juegos
-src/lib/cursos/         Los cursos: python.ts (contenido), calificar.ts, errores-python.ts, motor-python.ts
+src/lib/cursos/         Los cursos: python.ts y python-avanzado.ts (contenido), calificar.ts, errores-python.ts, motor-python.ts
 public/python/          El worker de Pyodide y corredor.py, que ejecuta el código del alumno
 src/components/cursos/  TallerCurso (la lección), MapaDelCurso, la tabla del panel del profesor
 src/lib/progress.ts     Progreso del examen: puntos, comodines, insignias
