@@ -6,8 +6,9 @@ import { Terminal, type TerminalHandle } from '@/components/Terminal'
 import { Aviso, type TonoAviso } from '@/components/Aviso'
 import { Confeti } from '@/components/Confeti'
 import { ConCodigo, Explicacion } from './Explicacion'
-import { useAvanceCurso } from './useAvanceCurso'
-import { leccionAbierta, retosHechos, totalRetos } from '@/lib/cursos'
+import { CursoCerrado } from './CursoCerrado'
+import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
+import { cursoSiguiente, leccionAbierta, retosHechos, totalRetos } from '@/lib/cursos'
 import { calificar, type Calificacion, type ResultadoPython } from '@/lib/cursos/calificar'
 import { explicarError } from '@/lib/cursos/errores-python'
 import { motorPython, type EstadoMotor } from '@/lib/cursos/motor-python'
@@ -25,6 +26,7 @@ const USA_INPUT = /\binput\s*\(/
 
 export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion }) {
   const { nombre, slug, avance, setAvance, cargado } = useAvanceCurso(curso.id)
+  const { previo, listo: previoListo, abierto: cursoAbierto } = useCursoPrevio(curso)
   const indiceLeccion = curso.lecciones.indexOf(leccion)
   const siguienteLeccion = curso.lecciones[indiceLeccion + 1]
 
@@ -166,13 +168,15 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
 
   /* ----------------------------------------------------------------- vista */
 
-  if (!cargado) {
+  if (!cargado || !previoListo) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="animate-pulse text-sm text-[#7f8fb3]">Cargando tu avance…</p>
       </main>
     )
   }
+
+  if (previo && !cursoAbierto) return <CursoCerrado curso={curso} previo={previo} />
 
   if (!abierta) {
     return (
@@ -528,17 +532,26 @@ function FinDeLeccion({
   cursoTerminado: boolean
   teclas: number
 }) {
+  const siguienteCurso = cursoSiguiente(curso)
   if (cursoTerminado) {
     return (
       <div className="aparecer mt-6 rounded-xl border border-[#166534] bg-[#0d2418] p-5 text-center">
         <p className="mb-2 text-4xl">🏆</p>
         <p className="text-base font-black text-[#c9f7d8]">¡Terminaste {curso.titulo}!</p>
         <p className="mt-2 text-xs leading-relaxed text-[#9fd9b4]">
-          {totalRetos(curso)} retos y {teclas} teclas, todas escritas por ti. Ya programas en dos lenguajes.
+          {totalRetos(curso)} retos y {teclas} teclas, todas escritas por ti.{' '}
+          {curso.despedida ?? 'Ya programas en dos lenguajes.'}
         </p>
-        <Link href={`/cursos/${curso.id}`} className="boton boton-primario mt-4 inline-block">
-          Ver el mapa del curso
-        </Link>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <Link href={`/cursos/${curso.id}`} className="boton boton-secundario inline-block">
+            Ver el mapa del curso
+          </Link>
+          {siguienteCurso && (
+            <Link href={`/cursos/${siguienteCurso.id}`} className="boton boton-primario inline-block">
+              Sigue con {siguienteCurso.emoji} {siguienteCurso.titulo} →
+            </Link>
+          )}
+        </div>
       </div>
     )
   }

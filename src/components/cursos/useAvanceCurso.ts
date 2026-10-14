@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   cargarAvanceLocal,
   cargarAvanceNube,
+  cursoCompleto,
+  cursoPorId,
   fusionarAvance,
   guardarAvanceLocal,
   guardarAvanceNube,
 } from '@/lib/cursos'
-import { avanceVacio, type AvanceCurso } from '@/lib/cursos/tipos'
+import { avanceVacio, type AvanceCurso, type Curso } from '@/lib/cursos/tipos'
 import { slugificar } from '@/lib/progress'
 
 /**
@@ -63,4 +65,35 @@ export function useAvanceCurso(idCurso: string) {
   useEffect(() => () => pendiente.current?.(), [])
 
   return { nombre, slug, avance, setAvance, cargado }
+}
+
+/**
+ * Si el curso pide terminar otro antes (Python avanzado pide Python desde
+ * cero), mira si el alumno ya lo terminó: en este navegador o en la nube, por
+ * si lo hizo en otro computador.
+ */
+export function useCursoPrevio(curso: Curso) {
+  const previo = curso.requiere ? cursoPorId(curso.requiere) : undefined
+  const [estado, setEstado] = useState({ listo: !previo, abierto: !previo })
+
+  useEffect(() => {
+    if (!previo) return
+    let vivo = true
+    ;(async () => {
+      let slug = ''
+      try {
+        slug = slugificar(localStorage.getItem('examen-web:activo') || '')
+      } catch {
+        /* sin almacenamiento: solo cuenta lo que diga la nube */
+      }
+      const local = cargarAvanceLocal(previo.id, slug)
+      const avance = cursoCompleto(previo, local) || !slug ? local : fusionarAvance(local, await cargarAvanceNube(previo.id, slug))
+      if (vivo) setEstado({ listo: true, abierto: cursoCompleto(previo, avance) })
+    })()
+    return () => {
+      vivo = false
+    }
+  }, [previo])
+
+  return { previo, ...estado }
 }

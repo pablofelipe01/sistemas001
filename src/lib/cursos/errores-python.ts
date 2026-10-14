@@ -54,7 +54,8 @@ function traducir({ tipo, mensaje }: ErrorPython, linea: string): [string, strin
   if (/\belse\s+if\b/.test(linea)) {
     return ['Eso es de JavaScript', 'En Python no es else if: es elif, todo pegado.']
   }
-  if (/\{\s*$/.test(linea) || /^\}/.test(linea)) {
+  // Un diccionario que sigue en el otro renglón (d = {) sí es Python.
+  if ((/\{\s*$/.test(linea) && !/[=(\[,:]\s*\{\s*$/.test(linea)) || /^\}\s*(else\b.*)?$/.test(linea)) {
     return ['Eso es de JavaScript', 'Python no usa llaves { }. Después del if, for, while o def van dos puntos, y lo de adentro se corre a la derecha.']
   }
   if (tipo === 'NameError' && /'(true|false|null)'/.test(mensaje)) {
@@ -68,8 +69,40 @@ function traducir({ tipo, mensaje }: ErrorPython, linea: string): [string, strin
   if (tipo === 'AttributeError' && /'length'/.test(mensaje)) {
     return ['Eso es de JavaScript', 'En Python no hay .length: se usa len(…).']
   }
+  if (tipo === 'NameError' && /'this'/.test(mensaje)) {
+    return ['Eso es de JavaScript', 'En Python no es this: es self. Y self va de primer parámetro en cada método: def jugar(self):']
+  }
+  if (/\bnew\s+[A-Z]\w*\s*\(/.test(linea)) {
+    return ['Eso es de JavaScript', 'En Python los objetos se crean sin new: toby = Perro("Toby").']
+  }
+  if (tipo === 'AttributeError' && /^'dict' object has no attribute/.test(mensaje)) {
+    const que = mensaje.match(/attribute '(.+?)'/)?.[1] ?? 'llave'
+    return ['Eso es de JavaScript', `En un diccionario no se usa punto: se escribe con corchetes y comillas, así: ["${que}"].`]
+  }
+  if (tipo === 'NameError' && /^name '\w+' is not defined/.test(mensaje) && /\{[^}]*\b\w+\s*:/.test(linea) && !/["']\s*:/.test(linea)) {
+    return ['Eso es de JavaScript', 'En un diccionario de Python las llaves van entre comillas: {"nombre": "Toby"}.']
+  }
 
   /* ---------------------------------------------------- los de Python --- */
+  if (tipo === 'NameError' && /'(random|math)'/.test(mensaje)) {
+    const modulo = mensaje.match(/'(random|math)'/)![1]
+    return [`Falta abrir ${modulo}`, `Escribe import ${modulo} arriba del todo, antes de usarlo.`]
+  }
+  if (tipo === 'NameError' && /'(randint|choice|shuffle|sqrt|pi|floor|ceil)'/.test(mensaje)) {
+    const que = mensaje.match(/'(\w+)'/)![1]
+    const modulo = ['randint', 'choice', 'shuffle'].includes(que) ? 'random' : 'math'
+    return ['Falta decir de qué módulo es', `Se escribe ${modulo}.${que}, con el nombre del módulo y un punto adelante.`]
+  }
+  if (tipo === 'NameError' && /'self'/.test(mensaje)) {
+    return ['self solo existe dentro de los métodos', 'Revisa que esta línea esté dentro de un def de la clase, y que ese def tenga self de primer parámetro.']
+  }
+  if (tipo === 'UnboundLocalError' || (tipo === 'NameError' && /cannot access local variable/.test(mensaje))) {
+    const nombre = mensaje.match(/variable '(.+?)'/)?.[1] ?? 'esa variable'
+    return [
+      'Lo de afuera no se cambia desde adentro',
+      `Dentro de la función usas ${nombre} antes de crearla ahí. Pásala como parámetro y devuelve el resultado con return.`,
+    ]
+  }
   if (tipo === 'NameError') {
     const nombre = mensaje.match(/name '(.+?)'/)?.[1] ?? ''
     if (/^[A-Z]/.test(nombre) && nombre.toLowerCase() === 'print') {
@@ -129,8 +162,26 @@ function traducir({ tipo, mensaje }: ErrorPython, linea: string): [string, strin
     if (/not supported between instances of 'str' and 'int'|'int' and 'str'/.test(mensaje)) {
       return ['Estás comparando texto con número', 'Lo que llega de input() es texto. Conviértelo con int(…) antes de comparar.']
     }
+    if (/takes 0 positional arguments but 1 was given/.test(mensaje) && /\./.test(mensaje)) {
+      return ['A este método le falta self', 'Todo método de una clase lleva self de primer parámetro: def jugar(self):']
+    }
+    if (/^\w+\(\) takes no arguments/.test(mensaje)) {
+      return ['La clase no sabe recibir datos', 'Le falta el __init__, o está mal escrito: son dos guiones bajos a cada lado, def __init__(self, …):']
+    }
     if (/takes \d+ positional argument|missing \d+ required positional argument/.test(mensaje)) {
       return ['La función recibió los datos que no era', 'Revisa cuántos datos pide la función en el def y cuántos le das cuando la llamas.']
+    }
+    if (/'tuple' object does not support item assignment/.test(mensaje)) {
+      return ['Las tuplas no se cambian', 'Una tupla queda como se creó. Si necesitas cambiarla, usa una lista, con corchetes.']
+    }
+    if (/'str' object does not support item assignment/.test(mensaje)) {
+      return ['Un texto no se cambia por dentro', 'Crea un texto nuevo y guárdalo: texto = texto.replace("a", "4").']
+    }
+    if (/'NoneType' object is not (subscriptable|iterable)/.test(mensaje)) {
+      return ['Eso está vacío (None)', '¿Guardaste lo que devuelve sort() o una función sin return? Esas no devuelven nada.']
+    }
+    if (/'int' object is not iterable/.test(mensaje)) {
+      return ['Un número no se puede recorrer', 'Para repetir varias veces se usa range: for i in range(5):']
     }
     if (/object is not callable/.test(mensaje)) {
       return ['Eso no es una función', 'Le pusiste paréntesis a algo que no es una función. ¿Usaste un nombre de variable igual al de una función?']
@@ -140,6 +191,24 @@ function traducir({ tipo, mensaje }: ErrorPython, linea: string): [string, strin
     const valor = mensaje.match(/: (.*)$/)?.[1] ?? ''
     return ['Eso no es un número', `int() solo convierte números, y le llegó ${valor}. Revisa la respuesta que le diste a input().`]
   }
+  if (tipo === 'ValueError' && /too many values to unpack/.test(mensaje)) {
+    return ['Sobran datos al desempacar', 'Hay más datos que variables a la izquierda del =. Pon una variable por cada dato.']
+  }
+  if (tipo === 'ValueError' && /not enough values to unpack/.test(mensaje)) {
+    return ['Faltan datos al desempacar', 'Hay más variables a la izquierda del = que datos. Pon una variable por cada dato.']
+  }
+  if (tipo === 'ValueError' && /x not in list/.test(mensaje)) {
+    return ['Eso no está en la lista', 'remove no encontró ese dato. Revisa cómo se escribe, con mayúsculas y todo.']
+  }
+  if (tipo === 'KeyError') {
+    return [
+      `La llave ${mensaje} no está en el diccionario`,
+      'Revisa cómo se escribe (las mayúsculas y las tildes cuentan). Si puede no estar, pregunta antes con in, o usa .get().',
+    ]
+  }
+  if (tipo === 'ModuleNotFoundError') {
+    return ['Ese módulo no existe', 'Revisa cómo se escribe: import random, import math.']
+  }
   if (tipo === 'ZeroDivisionError') {
     return ['División por cero', 'Ni Python ni nadie puede dividir entre cero.']
   }
@@ -148,10 +217,23 @@ function traducir({ tipo, mensaje }: ErrorPython, linea: string): [string, strin
   }
   if (tipo === 'AttributeError') {
     const que = mensaje.match(/attribute '(.+?)'/)?.[1]
+    if (/^'NoneType' object/.test(mensaje)) {
+      return ['Eso está vacío (None)', '¿Guardaste lo que devuelve sort() o una función sin return? Esas no devuelven nada.']
+    }
+    const tipoDelObjeto = mensaje.match(/^'(\w+)' object/)?.[1]
+    if (tipoDelObjeto && /^[A-Z]/.test(tipoDelObjeto)) {
+      return [
+        `Tu ${tipoDelObjeto} no tiene “${que}”`,
+        `¿Lo guardaste en el __init__ con self.${que}? ¿O el método se llama distinto? Revisa también la sangría: los métodos van dentro de la clase.`,
+      ]
+    }
     return ['Eso no existe', `${que ? `“${que}” no existe ahí. ` : ''}Revisa cómo se escribe: ¿append, upper, lower?`]
   }
   if (tipo === 'RecursionError') {
-    return ['Una función que se llama a sí misma sin parar', 'Revisa que la función no se llame a ella misma por dentro.']
+    return [
+      'Una función que se llama a sí misma sin parar',
+      'Le falta el caso base (el if que responde sin llamarse otra vez), o el paso no se acerca a él: tiene que ser n - 1, no n + 1.',
+    ]
   }
   return ['Python encontró un problema', 'Lee el mensaje de abajo: casi siempre dice en qué línea y qué esperaba encontrar.']
 }
