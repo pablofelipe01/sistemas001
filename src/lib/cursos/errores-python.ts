@@ -1,4 +1,4 @@
-import type { ErrorPython } from './calificar'
+import type { ErrorDelPrograma } from './calificar'
 
 /**
  * Los errores de Python vienen en inglés y con palabras de adulto. Aquí se
@@ -15,7 +15,7 @@ export interface ErrorExplicado {
   original: string
 }
 
-export function explicarError(e: ErrorPython, codigo: string): ErrorExplicado {
+export function explicarError(e: ErrorDelPrograma, codigo: string): ErrorExplicado {
   const linea = e.linea ? codigo.split('\n')[e.linea - 1] ?? '' : ''
   const donde = e.linea ? `Línea ${e.linea} · ` : ''
   const original = e.mensaje ? `${e.tipo}: ${e.mensaje}` : e.tipo
@@ -23,7 +23,7 @@ export function explicarError(e: ErrorPython, codigo: string): ErrorExplicado {
   return { titulo: donde + titulo, pista, original }
 }
 
-function traducir({ tipo, mensaje }: ErrorPython, linea: string): [string, string] {
+function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string): [string, string] {
   /* ------------------------------------------------- los de la página --- */
   if (tipo === 'SinRespuestas') {
     return [

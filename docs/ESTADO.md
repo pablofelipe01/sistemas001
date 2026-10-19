@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 14 de octubre de 2026
+Última actualización: 19 de octubre de 2026
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -14,15 +14,54 @@ Una app de Next.js para el salón, con cuatro partes:
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los cursos** (`/cursos`): Python desde cero y Python avanzado (10 lecciones × 5 retos cada uno).
+3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado y TypeScript (10 lecciones × 5 retos cada uno).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
-en los cursos de Python y en los proyectos.
+en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (14 de octubre de 2026)
+## Lo último que se hizo (19 de octubre de 2026)
+
+### TypeScript (`/cursos/typescript`)
+
+A pedido del profesor: "TypeScript desde JavaScript", 10 lecciones × 5 retos (unas 4
+horas), **abierto para todos** (no pide terminar Python: ya saben JavaScript). El
+contenido está en `src/lib/cursos/typescript.ts`; los id son `ts-N` y `ts-N-M`.
+Temas: tipos básicos, inferencia y `prompt`, funciones, listas, objetos (`type` e
+`interface`), opcionales y `??`, uniones y `typeof`, tipos literales y `Record`,
+genéricos, y clases (`private`, `readonly`, `implements`), cerrando con una mascota.
+
+- **Revisa los tipos con el compilador de verdad**, como pidió el profesor.
+  `public/typescript/worker.js` trae del CDN TypeScript 5.9.3 (la misma versión de
+  `package.json`), sus mensajes en español y los `lib.*.d.ts`; `corredor.js` revisa los
+  tipos (`strict`) y, **si hay un error de tipos, no corre el programa**: ese es el
+  punto del curso. Si no hay, quita los tipos y lo corre con un `console.log` y un
+  `prompt` propios (`prompt` siempre devuelve `string`, sin `null`).
+- **Pesa unos 1,5 MB comprimido**: la primera carga en un Chrome sin caché tardó unos
+  6 segundos; después cada corrida tarda unos 10 ms. Igual que con Python, conviene
+  abrir `/cursos/typescript` en cada computador antes de la clase.
+- **Prueba nueva `rechaza`** (en `tipos.ts` y `calificar.ts`): pega un pedazo al final del
+  programa y exige que los tipos se quejen (`saludar(5)` si saludar recibe un string).
+  Así se comprueba que pusieron bien los tipos, y atrapa a quien usa `any`.
+- **El motor ahora es de cualquier lenguaje**: `motor-python.ts` pasó a `motor.ts`
+  (`motorDe(lenguaje)`), los tipos del calificador se llaman `Pedido`, `Resultado` y
+  `ErrorDelPrograma`, y las pistas de error se reparten en `errores.ts` (Python en
+  `errores-python.ts`, TypeScript en `errores-typescript.ts`, que además caza los vicios
+  de Python: print, input, True).
+- **El calificador quita los comentarios según el lenguaje** (`#` en Python; `//` y `/* */`
+  en TypeScript, donde `#` es otra cosa).
+- **Verificado**: `/verificar-curso` en Chrome dio 210 revisados (los tres cursos) y 0
+  con problemas. La llave de TypeScript también se puede probar en Node con el
+  `typescript` de `node_modules`, porque `corredor.js` recibe el compilador por parámetro.
+- No hizo falta tocar Supabase: la columna `curso` de la tabla `cursos` es texto libre.
+
+**Pendiente de ver en clase**: cuánto tarda la primera carga con el internet del
+colegio, y si los errores de tipos se entienden (el título y la pista son nuestros, el
+renglón pequeño es el mensaje del compilador).
+
+## Antes (14 de octubre de 2026)
 
 ### Python avanzado (`/cursos/python-avanzado`)
 
@@ -198,8 +237,9 @@ contra una compu perfecta un niño solo empata, y eso no divierte a nadie.
 src/lib/challenges/     Los 75 retos del examen (html.ts, css.ts, js.ts)
 src/lib/proyectos.ts    Los 8 proyectos guiados con sus misiones
 src/lib/juegos.ts       Preguntas, parejas y códigos de carga de los juegos
-src/lib/cursos/         Los cursos: python.ts y python-avanzado.ts (contenido), calificar.ts, errores-python.ts, motor-python.ts
+src/lib/cursos/         Los cursos: python.ts, python-avanzado.ts y typescript.ts (contenido), calificar.ts, errores*.ts, motor.ts
 public/python/          El worker de Pyodide y corredor.py, que ejecuta el código del alumno
+public/typescript/      El worker del compilador de TypeScript y corredor.js, que revisa los tipos y corre el código
 src/components/cursos/  TallerCurso (la lección), MapaDelCurso, la tabla del panel del profesor
 src/lib/progress.ts     Progreso del examen: puntos, comodines, insignias
 src/lib/storage.ts      Guardar local + nube + fusión de los dos

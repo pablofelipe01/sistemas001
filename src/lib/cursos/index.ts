@@ -1,8 +1,9 @@
 import { CURSO_PYTHON } from './python'
 import { CURSO_PYTHON_AVANZADO } from './python-avanzado'
+import { CURSO_TYPESCRIPT } from './typescript'
 import { avanceVacio, type AvanceCurso, type Curso, type Leccion } from './tipos'
 
-export const CURSOS: Curso[] = [CURSO_PYTHON, CURSO_PYTHON_AVANZADO]
+export const CURSOS: Curso[] = [CURSO_PYTHON, CURSO_PYTHON_AVANZADO, CURSO_TYPESCRIPT]
 
 export function cursoPorId(id: string) {
   return CURSOS.find((c) => c.id === id)

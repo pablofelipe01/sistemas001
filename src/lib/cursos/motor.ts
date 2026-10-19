@@ -1,27 +1,36 @@
 'use client'
 
-import type { PedidoPython, ResultadoPython } from './calificar'
+import type { Pedido, Resultado } from './calificar'
+import type { Lenguaje } from './tipos'
 
 export type EstadoMotor = 'apagado' | 'cargando' | 'listo' | 'fallo'
 
 /** Segundos que se le dan a un programa antes de pensar que se quedó dando vueltas. */
 const PACIENCIA_MS = 5000
 
+/** Dónde vive el worker de cada lenguaje y cómo se llama para el alumno. */
+const WORKERS: Record<Lenguaje, { url: string; nombre: string }> = {
+  python: { url: '/python/worker.js', nombre: 'Python' },
+  typescript: { url: '/typescript/worker.js', nombre: 'TypeScript' },
+}
+
 /**
- * Un solo Python para toda la pestaña: cargarlo pesa, así que se arranca una vez
- * y se reutiliza al pasar de una lección a otra.
+ * Un solo motor por lenguaje para toda la pestaña: cargarlo pesa, así que se
+ * arranca una vez y se reutiliza al pasar de una lección a otra.
  *
  * Los pedidos van en fila. Si uno no contesta a tiempo, el worker se apaga (es
  * la única forma de parar un while infinito) y se levanta otro.
  */
-class MotorPython {
+class Motor {
   private worker: Worker | null = null
   private estado: EstadoMotor = 'apagado'
   private oyentes = new Set<(e: EstadoMotor) => void>()
   private listo: Promise<void> | null = null
   private fila: Promise<unknown> = Promise.resolve()
   private siguienteId = 1
-  private esperando = new Map<number, (r: ResultadoPython) => void>()
+  private esperando = new Map<number, (r: Resultado) => void>()
+
+  constructor(private lenguaje: Lenguaje) {}
 
   get actual() {
     return this.estado
@@ -40,11 +49,11 @@ class MotorPython {
     for (const fn of this.oyentes) fn(e)
   }
 
-  /** Arranca Python si no está arrancado. Se puede llamar las veces que sea. */
+  /** Arranca el motor si no está arrancado. Se puede llamar las veces que sea. */
   arrancar(): Promise<void> {
     if (this.listo && this.estado !== 'fallo') return this.listo
     this.cambiar('cargando')
-    const w = new Worker('/python/worker.js', { type: 'module' })
+    const w = new Worker(WORKERS[this.lenguaje].url, { type: 'module' })
     this.worker = w
     this.listo = new Promise<void>((resolver, rechazar) => {
       w.onmessage = (e: MessageEvent) => {
@@ -62,7 +71,7 @@ class MotorPython {
       }
       w.onerror = () => {
         this.cambiar('fallo')
-        rechazar(new Error('No se pudo cargar Python'))
+        rechazar(new Error(`No se pudo cargar ${WORKERS[this.lenguaje].nombre}`))
       }
     })
     return this.listo
@@ -76,16 +85,16 @@ class MotorPython {
     void this.arrancar().catch(() => {})
   }
 
-  correr(pedido: PedidoPython): Promise<ResultadoPython> {
+  correr(pedido: Pedido): Promise<Resultado> {
     const turno = this.fila.then(() => this.correrYa(pedido))
     this.fila = turno.catch(() => {})
     return turno
   }
 
-  private async correrYa(pedido: PedidoPython): Promise<ResultadoPython> {
+  private async correrYa(pedido: Pedido): Promise<Resultado> {
     await this.arrancar()
     const id = this.siguienteId++
-    return new Promise<ResultadoPython>((resolver) => {
+    return new Promise<Resultado>((resolver) => {
       const reloj = window.setTimeout(() => {
         this.esperando.delete(id)
         this.reiniciar()
@@ -100,9 +109,17 @@ class MotorPython {
   }
 }
 
-let unico: MotorPython | null = null
+const motores = new Map<Lenguaje, Motor>()
 
-export function motorPython() {
-  unico ??= new MotorPython()
-  return unico
+export function motorDe(lenguaje: Lenguaje) {
+  let m = motores.get(lenguaje)
+  if (!m) {
+    m = new Motor(lenguaje)
+    motores.set(lenguaje, m)
+  }
+  return m
+}
+
+export function nombreDelLenguaje(lenguaje: Lenguaje) {
+  return WORKERS[lenguaje].nombre
 }

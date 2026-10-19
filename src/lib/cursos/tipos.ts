@@ -1,6 +1,6 @@
 /**
  * Los cursos interactivos: una explicación corta por lección y cinco retos que
- * se resuelven en orden. El primero es Python.
+ * se resuelven en orden. Hay de Python y de TypeScript.
  *
  * Este archivo y calificar.ts no importan nada en tiempo de ejecución, a
  * propósito: así la llave de respuestas se puede probar también desde Node.
@@ -11,7 +11,7 @@ export type Bloque =
   | { t: 'p'; texto: string }
   /** Código de ejemplo que se puede correr desde la explicación, pero no copiar. */
   | { t: 'codigo'; codigo: string; entradas?: string[] }
-  /** Lo mismo en JavaScript (que ya conocen) y en Python, lado a lado. */
+  /** Lo mismo en JavaScript (que ya conocen) y en el lenguaje del curso, lado a lado. */
   | { t: 'compara'; js: string; py: string }
   /** Un ojo con esto: el error típico de la lección. */
   | { t: 'ojo'; texto: string }
@@ -27,13 +27,25 @@ export type Prueba =
   | { t: 'salida'; igual?: string; contiene?: string; veces?: number; no?: string; exacto?: boolean; entradas?: string[]; msg: string }
   /** Un renglón de la salida. `n` negativo cuenta desde el final (-1 = el último). */
   | { t: 'linea'; n: number; igual?: string; contiene?: string; entradas?: string[]; msg: string }
-  /** Una expresión de Python que se evalúa después del programa. `igual` es su repr: '8', "'hola'", 'True'. */
+  /**
+   * Una expresión que se evalúa después del programa. `igual` es como se ve:
+   * en Python su repr ('8', "'hola'", 'True'); en TypeScript como en la
+   * consola ('8', '"hola"', 'true', '[1, 2]').
+   */
   | { t: 'expr'; code: string; igual: string; entradas?: string[]; msg: string }
+  /**
+   * Solo TypeScript: este pedazo, pegado al final del programa, tiene que hacer
+   * que los tipos se quejen. Así se prueba que el alumno puso bien los tipos:
+   * `saludar(5)` no debe pasar si saludar recibe un string.
+   */
+  | { t: 'rechaza'; code: string; msg: string }
   /**
    * Busca (o prohíbe, con `not`) un patrón en el código. `min` exige que aparezca varias veces.
    * Mira el código sin comentarios, salvo que diga `crudo`.
    */
   | { t: 'src'; re: string; flags?: string; not?: boolean; min?: number; crudo?: boolean; msg: string }
+
+export type Lenguaje = 'python' | 'typescript'
 
 export interface Reto {
   /** 'py-3-2': lección 3, reto 2. */
@@ -67,8 +79,8 @@ export interface Curso {
   titulo: string
   emoji: string
   descripcion: string
-  /** Para el editor: qué resaltado usa. */
-  lenguaje: 'python'
+  /** Qué motor corre el código y qué resaltado usa el editor. */
+  lenguaje: Lenguaje
   /** El id del curso que hay que terminar antes de abrir este. */
   requiere?: string
   /** Lo que se le dice al alumno al terminar todo el curso. */

@@ -21,8 +21,8 @@ import { python as pyLang } from '@codemirror/lang-python'
 import { tags as t } from '@lezer/highlight'
 import type { Lang } from '@/lib/types'
 
-/** Los lenguajes del examen, más Python para los cursos. */
-export type LangEditor = Lang | 'python'
+/** Los lenguajes del examen, más los de los cursos. */
+export type LangEditor = Lang | 'python' | 'typescript'
 
 /** Marca los cambios que hace la app (una ayuda, reiniciar el reto) para que el guardia los deje pasar. */
 const CAMBIO_DE_LA_APP = Annotation.define<boolean>()
@@ -94,6 +94,7 @@ export function extensionDeLenguaje(lang: LangEditor) {
   if (lang === 'html') return htmlLang({ autoCloseTags: false })
   if (lang === 'css') return cssLang()
   if (lang === 'python') return pyLang()
+  if (lang === 'typescript') return jsLang({ typescript: true })
   return jsLang()
 }
 
@@ -102,6 +103,7 @@ const MARCADOR: Record<LangEditor, string> = {
   css: 'Escribe aquí tu CSS…',
   js: 'Escribe aquí tu JavaScript…',
   python: 'Escribe aquí tu Python…',
+  typescript: 'Escribe aquí tu TypeScript…',
 }
 
 export const Terminal = forwardRef<TerminalHandle, Props>(function Terminal(

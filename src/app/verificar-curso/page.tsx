@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { CURSOS } from '@/lib/cursos'
 import { calificar } from '@/lib/cursos/calificar'
-import { motorPython } from '@/lib/cursos/motor-python'
+import { motorDe } from '@/lib/cursos/motor'
+import type { Pedido } from '@/lib/cursos/calificar'
 
 /**
  * Autodiagnóstico de los cursos, hermano de /verificar y /verificar-proyecto.
@@ -26,8 +27,6 @@ export default function VerificarCurso() {
 
   useEffect(() => {
     let vivo = true
-    const motor = motorPython()
-    const correr = (p: Parameters<typeof motor.correr>[0]) => motor.correr(p)
 
     ;(async () => {
       const salida: Fila[] = []
@@ -37,6 +36,7 @@ export default function VerificarCurso() {
       }
 
       for (const c of CURSOS) {
+        const correr = (p: Pedido) => motorDe(c.lenguaje).correr(p)
         for (const l of c.lecciones) {
           for (const [i, b] of l.explicacion.entries()) {
             if (b.t !== 'codigo') continue
@@ -49,8 +49,8 @@ export default function VerificarCurso() {
             })
           }
           for (const r of l.retos) {
-            const bien = await calificar(r, r.solucion, correr)
-            const inicial = await calificar(r, r.inicial, correr)
+            const bien = await calificar(r, r.solucion, correr, c.lenguaje)
+            const inicial = await calificar(r, r.inicial, correr, c.lenguaje)
             const fallos = bien.resultados.filter((x) => !x.ok).map((x) => x.msg)
             anotar({
               id: r.id,
@@ -79,7 +79,7 @@ export default function VerificarCurso() {
     <main className="mx-auto max-w-3xl px-5 py-10">
       <h1 className="mb-1 text-2xl font-black">Verificar los cursos</h1>
       <p className="mb-6 text-xs text-[#7f8fb3]">
-        {corriendo ? 'Corriendo… (la primera vez hay que esperar a que cargue Python)' : 'Listo.'} {filas.length} revisados,{' '}
+        {corriendo ? 'Corriendo… (la primera vez hay que esperar a que carguen Python y TypeScript)' : 'Listo.'} {filas.length} revisados,{' '}
         <span className={malas.length ? 'text-[#fb7185]' : 'text-[#4ade80]'}>{malas.length} con problemas</span>.
       </p>
       <ul className="space-y-1 text-xs">
