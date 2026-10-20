@@ -11,7 +11,7 @@ import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
 import { cursoSiguiente, leccionAbierta, retosHechos, totalRetos } from '@/lib/cursos'
 import { calificar, type Calificacion, type Resultado } from '@/lib/cursos/calificar'
 import { explicarError } from '@/lib/cursos/errores'
-import { motorDe, nombreDelLenguaje, type EstadoMotor } from '@/lib/cursos/motor'
+import { correrCon, motorDe, nombreDelLenguaje, type EstadoMotor } from '@/lib/cursos/motor'
 import type { Curso, Leccion, Lenguaje } from '@/lib/cursos/tipos'
 import { registrarEvento } from '@/lib/storage'
 
@@ -25,12 +25,14 @@ const BURLAS_AL_PEGAR = [
 const PREGUNTAR: Record<Lenguaje, { funcion: string; re: RegExp }> = {
   python: { funcion: 'input()', re: /\binput\s*\(/ },
   typescript: { funcion: 'prompt()', re: /\bprompt\s*\(/ },
+  rust: { funcion: 'preguntar()', re: /\bpreguntar\s*\(/ },
 }
 
 /** Lo propio de cada lenguaje en la pantalla del taller. */
 const DETALLES: Record<Lenguaje, { emoji: string; extension: string; imprimir: string }> = {
   python: { emoji: '🐍', extension: 'py', imprimir: 'print' },
   typescript: { emoji: '🔷', extension: 'ts', imprimir: 'console.log' },
+  rust: { emoji: '🦀', extension: 'rs', imprimir: 'println!' },
 }
 
 export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion }) {
@@ -110,7 +112,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
     if (ocupado) return
     setOcupado(true)
     setAvance((a) => ({ ...a, intentos: { ...a.intentos, [reto.id]: (a.intentos[reto.id] ?? 0) + 1 } }))
-    const c = await calificar(reto, codigo, (p) => motorDelCurso.correr(p), curso.lenguaje)
+    const c = await calificar(reto, codigo, correrCon(curso.lenguaje), curso.lenguaje)
     setCalificacion(c)
     setCorrida({ r: c.rota ?? c.principal, codigo })
     setOcupado(false)
@@ -374,7 +376,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
             <span className="hidden text-[10px] text-[#3f5074] sm:block">Ctrl + Enter corre</span>
             <div className="ml-auto flex gap-2">
               <button onClick={() => void correr()} disabled={ocupado} className="boton boton-secundario">
-                ▶ Correr
+                {ocupado && curso.lenguaje === 'rust' ? '⏳ Compilando…' : '▶ Correr'}
               </button>
               {resuelto && indiceReto < leccion.retos.length - 1 ? (
                 <button onClick={() => irAReto(indiceReto + 1)} className="boton boton-primario latir">
@@ -540,7 +542,7 @@ function Salida({
         <div className="rounded-xl border border-[#7f1d3a] bg-[#2a0f1c] p-3">
           <p className="text-sm font-bold text-[#ffd7e2]">⏱ Tu programa no terminaba y lo detuvimos</p>
           <p className="mt-1 text-xs leading-relaxed text-[#fbc4d2]">
-            Casi siempre es un while cuya condición nunca se vuelve falsa. Revisa que adentro cambie algo.
+            Casi siempre es un ciclo (un while o un loop) que nunca termina. Revisa que adentro cambie algo, o que haya un break.
           </p>
         </div>
       )}

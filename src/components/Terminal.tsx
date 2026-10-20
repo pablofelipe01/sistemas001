@@ -18,11 +18,12 @@ import { html as htmlLang } from '@codemirror/lang-html'
 import { css as cssLang } from '@codemirror/lang-css'
 import { javascript as jsLang } from '@codemirror/lang-javascript'
 import { python as pyLang } from '@codemirror/lang-python'
+import { rust as rustLang } from '@codemirror/lang-rust'
 import { tags as t } from '@lezer/highlight'
 import type { Lang } from '@/lib/types'
 
 /** Los lenguajes del examen, más los de los cursos. */
-export type LangEditor = Lang | 'python' | 'typescript'
+export type LangEditor = Lang | 'python' | 'typescript' | 'rust'
 
 /** Marca los cambios que hace la app (una ayuda, reiniciar el reto) para que el guardia los deje pasar. */
 const CAMBIO_DE_LA_APP = Annotation.define<boolean>()
@@ -95,6 +96,7 @@ export function extensionDeLenguaje(lang: LangEditor) {
   if (lang === 'css') return cssLang()
   if (lang === 'python') return pyLang()
   if (lang === 'typescript') return jsLang({ typescript: true })
+  if (lang === 'rust') return rustLang()
   return jsLang()
 }
 
@@ -104,6 +106,7 @@ const MARCADOR: Record<LangEditor, string> = {
   js: 'Escribe aquí tu JavaScript…',
   python: 'Escribe aquí tu Python…',
   typescript: 'Escribe aquí tu TypeScript…',
+  rust: 'Escribe aquí tu Rust…',
 }
 
 export const Terminal = forwardRef<TerminalHandle, Props>(function Terminal(
@@ -237,7 +240,7 @@ export const Terminal = forwardRef<TerminalHandle, Props>(function Terminal(
           history(),
           indentOnInput(),
           // En Python la sangría es parte del lenguaje y la costumbre son 4 espacios.
-          indentUnit.of(lang === 'python' ? '    ' : '  '),
+          indentUnit.of(lang === 'python' || lang === 'rust' ? '    ' : '  '),
           bracketMatching(),
           closeBrackets(),
           // Autocompletado NO: sugerir etiquetas sería darles media respuesta.

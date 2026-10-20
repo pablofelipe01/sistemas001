@@ -1,6 +1,6 @@
 /**
  * Los cursos interactivos: una explicación corta por lección y cinco retos que
- * se resuelven en orden. Hay de Python y de TypeScript.
+ * se resuelven en orden. Hay de Python, de TypeScript y de Rust.
  *
  * Este archivo y calificar.ts no importan nada en tiempo de ejecución, a
  * propósito: así la llave de respuestas se puede probar también desde Node.
@@ -30,7 +30,8 @@ export type Prueba =
   /**
    * Una expresión que se evalúa después del programa. `igual` es como se ve:
    * en Python su repr ('8', "'hola'", 'True'); en TypeScript como en la
-   * consola ('8', '"hola"', 'true', '[1, 2]').
+   * consola ('8', '"hola"', 'true', '[1, 2]'); en Rust con {:?} ('8',
+   * '"hola"', '12.0', '[1, 2]').
    */
   | { t: 'expr'; code: string; igual: string; entradas?: string[]; msg: string }
   /**
@@ -45,7 +46,7 @@ export type Prueba =
    */
   | { t: 'src'; re: string; flags?: string; not?: boolean; min?: number; crudo?: boolean; msg: string }
 
-export type Lenguaje = 'python' | 'typescript'
+export type Lenguaje = 'python' | 'typescript' | 'rust'
 
 export interface Reto {
   /** 'py-3-2': lección 3, reto 2. */

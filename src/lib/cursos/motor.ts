@@ -1,6 +1,6 @@
 'use client'
 
-import type { Pedido, Resultado } from './calificar'
+import type { Correr, Pedido, Resultado } from './calificar'
 import type { Lenguaje } from './tipos'
 
 export type EstadoMotor = 'apagado' | 'cargando' | 'listo' | 'fallo'
@@ -8,10 +8,13 @@ export type EstadoMotor = 'apagado' | 'cargando' | 'listo' | 'fallo'
 /** Segundos que se le dan a un programa antes de pensar que se quedó dando vueltas. */
 const PACIENCIA_MS = 5000
 
-/** Dónde vive el worker de cada lenguaje y cómo se llama para el alumno. */
-const WORKERS: Record<Lenguaje, { url: string; nombre: string }> = {
-  python: { url: '/python/worker.js', nombre: 'Python' },
-  typescript: { url: '/typescript/worker.js', nombre: 'TypeScript' },
+/** Cómo se llama cada lenguaje para el alumno. */
+const NOMBRES: Record<Lenguaje, string> = { python: 'Python', typescript: 'TypeScript', rust: 'Rust' }
+
+/** Dónde vive el worker de los lenguajes que corren en el navegador. Rust no: se compila en el servidor. */
+const WORKERS: Record<Exclude<Lenguaje, 'rust'>, string> = {
+  python: '/python/worker.js',
+  typescript: '/typescript/worker.js',
 }
 
 /**
@@ -30,7 +33,7 @@ class Motor {
   private siguienteId = 1
   private esperando = new Map<number, (r: Resultado) => void>()
 
-  constructor(private lenguaje: Lenguaje) {}
+  constructor(private lenguaje: Exclude<Lenguaje, 'rust'>) {}
 
   get actual() {
     return this.estado
@@ -53,7 +56,7 @@ class Motor {
   arrancar(): Promise<void> {
     if (this.listo && this.estado !== 'fallo') return this.listo
     this.cambiar('cargando')
-    const w = new Worker(WORKERS[this.lenguaje].url, { type: 'module' })
+    const w = new Worker(WORKERS[this.lenguaje], { type: 'module' })
     this.worker = w
     this.listo = new Promise<void>((resolver, rechazar) => {
       w.onmessage = (e: MessageEvent) => {
@@ -71,7 +74,7 @@ class Motor {
       }
       w.onerror = () => {
         this.cambiar('fallo')
-        rechazar(new Error(`No se pudo cargar ${WORKERS[this.lenguaje].nombre}`))
+        rechazar(new Error(`No se pudo cargar ${NOMBRES[this.lenguaje]}`))
       }
     })
     return this.listo
@@ -89,6 +92,12 @@ class Motor {
     const turno = this.fila.then(() => this.correrYa(pedido))
     this.fila = turno.catch(() => {})
     return turno
+  }
+
+  async correrVarios(pedidos: Pedido[]): Promise<Resultado[]> {
+    const resultados: Resultado[] = []
+    for (const p of pedidos) resultados.push(await this.correr(p))
+    return resultados
   }
 
   private async correrYa(pedido: Pedido): Promise<Resultado> {
@@ -109,17 +118,65 @@ class Motor {
   }
 }
 
-const motores = new Map<Lenguaje, Motor>()
+/**
+ * Rust no cabe en el navegador: cada corrida va a /api/rust, que compila en el
+ * Rust Playground. No hay nada que cargar, así que siempre está listo; lo que
+ * tarda (un par de segundos) es cada corrida. Varios pedidos del mismo código
+ * viajan juntos y se compilan una sola vez.
+ */
+class MotorRust {
+  get actual(): EstadoMotor {
+    return 'listo'
+  }
 
-export function motorDe(lenguaje: Lenguaje) {
+  escuchar(fn: (e: EstadoMotor) => void) {
+    fn('listo')
+    return () => {}
+  }
+
+  arrancar(): Promise<void> {
+    return Promise.resolve()
+  }
+
+  async correr(pedido: Pedido): Promise<Resultado> {
+    return (await this.correrVarios([pedido]))[0]
+  }
+
+  async correrVarios(pedidos: Pedido[]): Promise<Resultado[]> {
+    try {
+      const r = await fetch('/api/rust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidos }),
+      })
+      const d = await r.json()
+      if (!Array.isArray(d?.resultados)) throw new Error(d?.error ?? 'Respuesta rara')
+      return d.resultados
+    } catch {
+      const error = { tipo: 'SinConexion', mensaje: '', linea: null }
+      return pedidos.map(() => ({ salida: '', error, valores: [] }))
+    }
+  }
+}
+
+type MotorDeCurso = Motor | MotorRust
+const motores = new Map<Lenguaje, MotorDeCurso>()
+
+export function motorDe(lenguaje: Lenguaje): MotorDeCurso {
   let m = motores.get(lenguaje)
   if (!m) {
-    m = new Motor(lenguaje)
+    m = lenguaje === 'rust' ? new MotorRust() : new Motor(lenguaje)
     motores.set(lenguaje, m)
   }
   return m
 }
 
+/** Lo que recibe calificar(): corre un pedido o, de una vez, varios. */
+export function correrCon(lenguaje: Lenguaje): Correr {
+  const m = motorDe(lenguaje)
+  return Object.assign((p: Pedido) => m.correr(p), { varios: (ps: Pedido[]) => m.correrVarios(ps) })
+}
+
 export function nombreDelLenguaje(lenguaje: Lenguaje) {
-  return WORKERS[lenguaje].nombre
+  return NOMBRES[lenguaje]
 }
