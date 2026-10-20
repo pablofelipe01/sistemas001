@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 19 de octubre de 2026
+Última actualización: 20 de octubre de 2026
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -14,7 +14,8 @@ Una app de Next.js para el salón, con cuatro partes:
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado y TypeScript (10 lecciones × 5 retos cada uno).
+3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado, TypeScript y TypeScript
+   avanzado (10 lecciones × 5 retos cada uno).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
@@ -22,7 +23,47 @@ en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (19 de octubre de 2026)
+## Lo último que se hizo (20 de octubre de 2026)
+
+### TypeScript avanzado (`/cursos/typescript-avanzado`)
+
+A pedido del profesor: la segunda parte de TypeScript, como curso aparte y con el mismo
+formato (10 lecciones × 5 retos, unas 4 horas y media). El contenido está en
+`src/lib/cursos/typescript-avanzado.ts`; los id son `tsa-N` y `tsa-N-M`. Se hizo en la
+rama `curso-typescript-avanzado`, que sale de `curso-typescript` (el PR #4 todavía no
+estaba fusionado): hay que fusionar primero el #4 y después este.
+
+Lecciones, en los cuatro bloques que escogió el profesor:
+uniones con etiqueta (L1) · `never` para que no se olvide un caso, `in` y guardianes
+con `is` (L2) · `keyof`, `typeof` y `as const` (L3) · `Partial`, `Pick`, `Omit` y
+`Readonly` (L4) · funciones como tipo, callbacks y fábricas (L5) · `map`, `filter` y
+`reduce` (L6) · genéricos con `extends` y `K extends keyof T` (L7) · tuplas (L8, cierra
+con las vecinas de una casilla del triqui) · `unknown`, `throw` y `try/catch` (L9) · el
+tipo `Resultado<T>` (L10, cierra con un cajero que junta todo el curso).
+
+- **Se abre al terminar TypeScript desde JavaScript** (campo `requiere`), igual que Python
+  avanzado: candado, desbloqueo y "Sigue con 💎 TypeScript avanzado" al final del primero.
+- **Las pruebas `rechaza` cargan el curso**: se probó también al revés, con soluciones
+  tramposas (con `any`, un guardián que devuelve `boolean`, `return c` con la clave
+  adentro, `Partial<Producto>` que deja cambiar el id…). Las 17 trampas se atajan.
+  Truco útil para el guardián de L2: dentro del `if`, `v === "hola"` con un number da
+  error (TS2367), y con `number | string` no.
+- **Ojo con las `expr`**: se corren después de quitar los tipos, así que van en
+  JavaScript puro (sin `as` ni anotaciones). Las `rechaza` sí son TypeScript.
+- **Pistas nuevas** en `errores-typescript.ts`: el `never` del `default` ("Te faltó un
+  caso: triangulo…"), propiedades de una unión que creó el alumno (Figura,
+  `Resultado<number>`: "pregunta primero cuál es"), `T` sin regla ("ponle extends"),
+  `unknown` (TS18046), posición de tupla que no existe (TS2493), regla de `extends` que no
+  se cumple (TS2344), listas `readonly`, y un error lanzado sin `try` sugiere atraparlo.
+- **Verificado**: la llave en Node con el TypeScript 5.9.3 de `node_modules` (76/76) y
+  `/verificar-curso` en un Chrome sin pantalla: 286 revisados (los cuatro cursos), 0 con
+  problemas. No se escribió un reto a mano en la página: el motor es el mismo del primero.
+- No hubo que tocar Supabase.
+
+**Pendiente de ver en clase**: L2 (`never`) y L7 (`K extends keyof T`) son los saltos más
+grandes; si cuestan, se pueden partir en dos lecciones.
+
+## Antes (19 de octubre de 2026)
 
 ### TypeScript (`/cursos/typescript`)
 

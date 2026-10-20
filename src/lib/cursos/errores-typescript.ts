@@ -17,7 +17,7 @@ export function explicarErrorTS(e: ErrorDelPrograma, codigo: string): ErrorExpli
   const donde = e.linea ? `Línea ${e.linea} · ` : ''
   const deTipos = /^TS\d+$/.test(e.tipo)
   const original = deTipos ? `${e.mensaje.split('\n')[0]} (${e.tipo})` : e.mensaje ? `${e.tipo}: ${e.mensaje}` : e.tipo
-  const [titulo, base] = traducir(e, linea.trim())
+  const [titulo, base] = traducir(e, linea.trim(), codigo)
   let pista = base
   if (deTipos) pista += ' Por eso no se corrió: TypeScript revisa antes de correr.'
   if (e.cuantos && e.cuantos > 1) {
@@ -31,7 +31,19 @@ function entreComillas(mensaje: string) {
   return [...mensaje.split('\n')[0].matchAll(/'([^']*)'|"([^"]*)"/g)].map((m) => m[1] ?? m[2])
 }
 
-function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string): [string, string] {
+/**
+ * ¿El alumno creó ese tipo como una unión? `type Figura = Circulo | Cuadrado`,
+ * o en varios renglones, cada uno empezando con `|`. `Resultado<number>` se
+ * busca como Resultado.
+ */
+function esUnionDelAlumno(nombre: string | undefined, codigo: string) {
+  const base = nombre?.match(/^\w+/)?.[0]
+  if (!base) return false
+  const m = codigo.match(new RegExp(`\\btype\\s+${base}\\b[^=]*=([\\s\\S]*?)(\\n\\s*\\n|$)`))
+  return Boolean(m && /^\s*\|/.test(m[1])) || Boolean(m && /^[^\n{]*\|/.test(m[1]))
+}
+
+function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: string): [string, string] {
   const [a, b, c] = entreComillas(mensaje)
 
   /* ------------------------------------------------- los de la página --- */
@@ -62,6 +74,11 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string): [string, 
   /* ------------------------------------------------ errores de tipos --- */
   switch (tipo) {
     case 'TS2322':
+      if (b === 'never' && /:\s*never\b/.test(linea)) {
+        // La alarma del switch: llegó un caso que nadie atendió.
+        const caso = a?.match(/"([^"]+)"/)?.[1] ?? a
+        return ['Te faltó un caso', `${caso} llegó hasta el never: nadie lo atendió. Agrégale su case al switch.`]
+      }
       if (b === 'never') {
         return ['Ahí no cabe nada', 'Esa lista o variable quedó sin tipo. Dile qué guarda: let lista: string[] = []']
       }
@@ -89,6 +106,21 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string): [string, 
     case 'TS2339':
       if (b?.includes('|')) {
         return [`Puede que no tenga “${a}”`, `Puede ser ${b}, y no todos tienen ${a}. Pregunta primero con typeof cuál es.`]
+      }
+      if (esUnionDelAlumno(b, codigo)) {
+        return [
+          `Puede que no tenga “${a}”`,
+          `${b} es una unión, y no todas sus formas tienen ${a}. Pregunta primero cuál es: por su etiqueta (como .tipo o .ok), con in o con typeof.`,
+        ]
+      }
+      if (b?.startsWith('readonly ')) {
+        return ['Esa lista es de solo lectura', `Tiene readonly: no se le puede hacer ${a} ni cambiarla.`]
+      }
+      if (b && /^[A-Z]$/.test(b)) {
+        return [
+          `TypeScript no sabe si ${b} tiene “${a}”`,
+          `${b} puede ser cualquier tipo. Ponle una regla: <${b} extends { ${a}: … }>.`,
+        ]
       }
       return [`Un ${b} no tiene “${a}”`, 'Revisa cómo se escribe, o el tipo de esa variable: a lo mejor no es lo que crees.']
     case 'TS2551':
@@ -149,6 +181,16 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string): [string, 
     case 'TS2341':
     case 'TS2445':
       return [`“${a}” es privado`, 'Solo se puede usar adentro de la clase. Desde afuera, usa un método.']
+    case 'TS18046':
+    case 'TS2571':
+      return [
+        a ? `¿Qué es “${a}”?` : '¿Qué es eso?',
+        'Es unknown: antes de usarlo, pregunta qué es con typeof, o con instanceof Error si viene de un catch.',
+      ]
+    case 'TS2493':
+      return ['Esa posición no existe', `La tupla ${a} tiene ${b} posiciones: de la 0 a la ${Number(b) - 1}.`]
+    case 'TS2344':
+      return ['No cumple la regla', `El tipo ${a} no cumple con ${b}, la regla que va después del extends.`]
     case 'TS2769':
       return ['Así no se llama esa función', 'Revisa qué datos le estás dando y de qué tipo son.']
     case 'TS7053':
@@ -187,7 +229,8 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string): [string, 
     return ['Eso no es una función', 'Revisa cómo se escribe: ¿push, toUpperCase, includes?']
   }
   if (tipo === 'Error' || tipo === 'FalloInterno') {
-    return ['Tu programa lanzó un error', mensaje ? `El mensaje dice: ${mensaje}` : 'Lee el mensaje de abajo.']
+    const atrapar = tipo === 'Error' && !/\btry\s*\{/.test(codigo) ? ' Si quieres que el programa siga, atrápalo con try { … } catch (e) { … }.' : ''
+    return ['Tu programa lanzó un error', (mensaje ? `El mensaje dice: ${mensaje}${/[.!?]$/.test(mensaje) ? '' : '.'}` : 'Lee el mensaje de abajo.') + atrapar]
   }
   return ['Algo falló mientras corría', 'Lee el mensaje de abajo y busca qué línea lo pudo causar.']
 }
