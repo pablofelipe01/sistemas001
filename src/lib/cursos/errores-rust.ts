@@ -78,11 +78,15 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: st
   }
 
   /* ------------------------------------------------ los de compilar --- */
+  if (/^E04(12|25|33)$/.test(tipo) && (a === 'HashMap' || a === 'HashSet')) {
+    return [`Falta traer el ${a}`, `Arriba de todo, antes de fn main, escribe: use std::collections::${a};`]
+  }
   if (tipo === 'E0423' || tipo === 'E0574') {
     if (/macro/.test(primero)) return ['Le falta el signo de admiración', `Se escribe ${a}!(…), con el ! pegado: es una macro.`]
   }
   if (tipo === 'E0425') {
     if (a === 'main_del_alumno') return ['Falta fn main', 'Todo programa de Rust empieza en fn main() { … }. Revisa que esté y que se escriba así.']
+    if (/^[A-Z]/.test(a ?? '')) return [`No conozco “${a}”`, `¿Ya creaste el struct o el enum ${a}? Los nombres con mayúscula son tipos.`]
     if (/function/.test(primero)) return [`No conozco la función “${a}”`, '¿Ya la creaste con fn? Revisa cómo se escribe: las mayúsculas y los guiones bajos cuentan.']
     return [`No conozco “${a}”`, '¿Ya la creaste con let? Si la creaste adentro de unas llaves { }, afuera ya no existe.']
   }
@@ -91,7 +95,34 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: st
     case 'E0384':
       return [`“${a}” no se puede cambiar`, `En Rust las variables no cambian, salvo que lo digas: créala con let mut ${a}.`]
     case 'E0596':
+      if (/behind a `&` reference/.test(primero)) {
+        return ['Ese préstamo es solo para mirar', 'Para cambiarlo, pídelo prestado con &mut: el parámetro es &mut (por ejemplo, s: &mut String) y se llama con &mut.']
+      }
+      if (/`self`/.test(primero)) return ['El método no puede cambiar nada', 'Para cambiar el struct, el método recibe &mut self en vez de &self.']
       return [`“${a}” no se puede cambiar`, `Para cambiarla (o hacerle push) hay que crearla con let mut ${a}.`]
+    case 'E0594':
+      if (/behind a `&` reference/.test(primero)) {
+        return ['Ese préstamo es solo para mirar', /self/.test(primero) ? 'Para cambiar el struct, el método recibe &mut self en vez de &self.' : 'Para cambiarlo, pídelo prestado con &mut.']
+      }
+      return [`“${a}” no se puede cambiar`, 'Para cambiarla, créala con let mut.']
+    case 'E0502':
+    case 'E0499':
+      return [`“${a}” está prestado`, 'Rust deja prestar algo a muchos para mirar o a uno solo para cambiar, pero no las dos cosas a la vez. Termina de usar un préstamo antes de pedir el otro.']
+    case 'E0507':
+      return ['Eso está prestado: no lo puedes regalar', 'Lo tienes solo prestado. Usa .clone() para tener tu propia copia, o sigue prestándolo con &.']
+    case 'E0004': {
+      const caso = primero.match(/`([^`]+)`(?: and `[^`]+`)* not covered/)?.[1]
+      return [caso ? `Te faltó un caso: ${caso}` : 'Te faltó un caso', 'Un match tiene que atender todas las opciones. Agrégale su línea con =>.']
+    }
+    case 'E0063':
+      return [`Le falta el campo “${a}”`, 'Al crear un struct hay que darle todos sus campos.']
+    case 'E0560':
+    case 'E0609':
+      return [`Ese campo no existe: “${b ?? a}”`, 'Revisa cómo se llaman los campos del struct: las mayúsculas y los guiones bajos cuentan.']
+    case 'E0046':
+      return ['Al impl le falta algo', `El trait pide ${a ? `“${a}”` : 'más métodos'} y no lo escribiste. Cópiale el nombre y los tipos tal cual del trait.`]
+    case 'E0407':
+      return [`El trait no tiene “${a}”`, 'Revisa que el método se llame igual que en el trait.']
     case 'E0308': {
       const tipos = esperadoYEncontrado(mensaje)
       if (tipos && tipos[1] === 'nada') {
@@ -102,6 +133,12 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: st
       }
       if (tipos && tipos[0] === 'nada') {
         return ['Ahí sobra un valor', 'Ahí no se esperaba nada. ¿Le falta un punto y coma a la línea? ¿O a la función le falta decir qué devuelve con -> ?']
+      }
+      if (tipos && /^Option</.test(tipos[0]) && !/^Option</.test(tipos[1])) {
+        return ['Falta envolverlo en Some', `La función devuelve un ${tipos[0]}: el dato va como Some(dato), y la nada como None.`]
+      }
+      if (tipos && /^Result</.test(tipos[0]) && !/^Result</.test(tipos[1])) {
+        return ['Falta envolverlo en Ok', `La función devuelve un ${tipos[0]}: lo que sale bien va como Ok(dato), y el error como Err(…).`]
       }
       if (tipos?.[0] === 'String' && tipos[1] === '&str') {
         return ['Ahí va un String, no un &str', 'Conviértelo con String::from("…") o con .to_string().']
@@ -117,11 +154,21 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: st
       if (/cannot (add|subtract|multiply|divide)|no implementation for `\{?(integer|float|i32|f64)/.test(primero)) {
         return ['No se mezclan enteros y decimales', 'En una cuenta de Rust, un i32 y un f64 no se mezclan así no más. Convierte el entero con as f64: n as f64 * 2.5']
       }
+      if (/doesn't implement `(std::fmt::)?Debug`/.test(primero)) {
+        return [`Rust no sabe mostrar ${a ? `un ${a}` : 'eso'} con {:?}`, 'Ponle #[derive(Debug)] justo encima del struct o del enum.']
+      }
       if (/cannot be formatted|doesn't implement `std::fmt::Display`/.test(primero)) {
-        return ['Eso no se imprime con {}', 'Las listas se imprimen con {:?} en vez de {}.']
+        if (/^(Vec|HashMap|Option|Result|\(|\[)/.test(a ?? '')) return ['Eso no se imprime con {}', 'Las listas, los Option y los Result se muestran con {:?} en vez de {}.']
+        return [`Rust no sabe mostrar ${a ? `un ${a}` : 'eso'} con {}`, 'Escríbele impl fmt::Display, o muéstralo con {:?} si tiene #[derive(Debug)].']
+      }
+      if (/`\?` operator/.test(primero)) {
+        return ['El ? no se puede usar aquí', 'El signo ? solo va en funciones que devuelven un Result (o un Option). Cambia lo que devuelve la función, o usa match.']
       }
       return ['Eso no se puede hacer con ese tipo', 'Lee el mensaje de abajo: dice qué tipo tiene y qué le faltó.']
     case 'E0369':
+      if (/`==`|`!=`/.test(primero) && !/&str|String|i32|f64/.test(primero)) {
+        return ['Esos no se pueden comparar con ==', `Ponle PartialEq al derive del tipo: #[derive(Debug, PartialEq)].`]
+      }
       if (/&str|String/.test(primero)) return ['Los textos no se pegan con +', 'Para armar un texto usa format!("{} {}", uno, otro).']
       return ['Esa cuenta no se puede', 'Revisa de qué tipo son los dos lados.']
     case 'E0061':
@@ -130,6 +177,11 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: st
       return ['No cuadra el número de datos', pide ? `La función recibe ${pide} y le diste ${dio}.` : 'Revisa cuántos datos recibe la función.']
     }
     case 'E0599':
+      if (/found for (struct|enum) `/.test(primero) && b && /no (function or associated item|method) named/.test(primero)) {
+        const que = /no method/.test(primero) ? 'el método' : 'la función'
+        return [`${b} todavía no tiene “${a}”`, `Escribe ${que} ${a} adentro de impl ${b} { … }, o revisa cómo se escribe.`]
+      }
+      if (/no variant/.test(primero)) return [`${b ?? 'Ese enum'} no tiene la opción “${a}”`, 'Revisa cómo se escribe: las mayúsculas cuentan.']
       return [`Eso no tiene “${a}”`, 'Revisa cómo se escribe: las mayúsculas y los guiones bajos cuentan. ¿O es de otro tipo?']
     case 'E0282':
     case 'E0284':
@@ -137,13 +189,20 @@ function traducir({ tipo, mensaje }: ErrorDelPrograma, linea: string, codigo: st
     case 'E0381':
       return [`“${a}” no tiene valor`, 'Dale un valor cuando la creas: let x = 0;']
     case 'E0382':
-      return [`“${a}” ya se usó`, 'Un String se le pasó a otro y ya no es tuyo. Usa &nombre para prestarlo, o .clone() para hacer una copia.']
+      return [
+        `“${a}” ya no es tuyo`,
+        `Se lo pasaste a otra variable o a una función, y se movió. Para prestarlo usa &${a}; si de verdad necesitas dos, ${a}.clone().`,
+      ]
     case 'E0106':
       return ['Falta decir de dónde sale ese texto', 'Si la función devuelve un texto, que devuelva un String: -> String, y String::from("…").']
     case 'E0428':
       return [`Ya existe “${a}”`, 'Hay dos cosas con el mismo nombre. Cámbiale el nombre a una.']
-    case 'E0432':
     case 'E0433':
+      if (/undeclared type/.test(primero)) return [`No conozco el tipo “${a}”`, `¿Ya creaste el struct o el enum ${a}? Revisa cómo se escribe, con su mayúscula.`]
+      return ['No encuentro eso', 'Revisa cómo se escribe, con sus :: y sus mayúsculas. ¿Falta un use arriba, como use std::collections::HashMap?']
+    case 'E0412':
+      return [`No conozco el tipo “${a}”`, a === 'HashMap' ? 'Arriba de todo falta: use std::collections::HashMap;' : `¿Ya creaste el struct o el enum ${a}? ¿O falta un use arriba?`]
+    case 'E0432':
       return ['No encuentro eso', 'Revisa cómo se escribe, con sus :: y sus mayúsculas.']
     case 'E0765':
     case 'E0766':

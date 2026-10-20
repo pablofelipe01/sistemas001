@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 20 de octubre de 2026 (Rust)
+Última actualización: 20 de octubre de 2026 (Rust avanzado)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -15,7 +15,7 @@ Una app de Next.js para el salón, con cuatro partes:
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
 3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado, TypeScript, TypeScript
-   avanzado y Rust desde cero (10 lecciones × 5 retos cada uno).
+   avanzado, Rust desde cero y Rust avanzado (10 lecciones × 5 retos cada uno).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
@@ -24,6 +24,41 @@ en los cursos y en los proyectos.
 La regla de fondo, en todo: **se escribe, no se pega.**
 
 ## Lo último que se hizo (20 de octubre de 2026)
+
+### Rust avanzado (`/cursos/rust-avanzado`)
+
+A pedido del profesor: la segunda parte de Rust, como curso aparte, con el mismo formato
+(10 lecciones × 5 retos, unas 5 horas) y los cuatro bloques que escogió. El contenido
+está en `src/lib/cursos/rust-avanzado.ts`; los id son `rsa-N` y `rsa-N-M`. **Se abre al
+terminar Rust desde cero** (campo `requiere`).
+
+Lecciones: cada cosa tiene un dueño (mover, `.clone()`, prestar con `&`) · prestar para
+cambiar (`&mut`, `*x`) · structs con `impl`, `&self` y `&mut self` · enums con datos y
+`match` · `Option` (`Some`/`None`, `if let`, `get`, `unwrap_or`) · iteradores (`map`,
+`filter`, `sum`, `count`, `zip`, `sort`) · textos letra por letra (`chars`, `rev`,
+`split_whitespace`) · `HashMap` (`entry().or_insert`) · `Result` y el signo `?` · traits
+(`impl Trait for`, `&impl Trait`, `derive(Debug)`, `Display`), cerrando con una mascota
+virtual que junta struct, enum, Result y Display.
+
+- **Mismo motor que el primero**, sin cambios: Playground por `/api/rust`. Las pruebas
+  `expr` aquí pueden ser un bloque `{ … }` que arma algo y devuelve lo último.
+- **Sin lifetimes** (`'a`, `'static`): el calificador quita comentarios tratando la
+  comilla sencilla como inicio de texto. Las funciones devuelven `String`.
+- **Pistas nuevas** en `errores-rust.ts`: dato movido (E0382), préstamo de solo lectura
+  (E0596/E0594, también con `&self`), préstamos que chocan (E0502), caso que falta en un
+  match (E0004, nombra el caso), falta `#[derive(Debug)]` o `Display`, `==` sin
+  `PartialEq`, `?` en una función que no devuelve Result, falta `Some(…)`/`Ok(…)`, campo
+  que falta o que no existe, método que falta en el `impl` o en el trait, tipo sin
+  crear, y `HashMap` sin su `use`.
+- **Verificado**: la llave con el `rustc` local (50 soluciones y 19 ejemplos) y
+  `/verificar-curso?curso=rust-avanzado` contra el Playground: 69 de 69 en 175 s. En
+  Chrome sin pantalla: candado, desbloqueo y "Sigue con 🦾 Rust avanzado".
+- No hubo que tocar Supabase.
+
+**Pendiente de ver en clase**: dueños y préstamos (L1 y L2) son lo más nuevo para ellos;
+si cuestan, se pueden partir en más lecciones.
+
+## Antes (20 de octubre de 2026): Rust desde cero
 
 ### Rust desde cero (`/cursos/rust`)
 
