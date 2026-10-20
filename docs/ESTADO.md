@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 20 de octubre de 2026
+Última actualización: 20 de octubre de 2026 (Rust)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -14,8 +14,8 @@ Una app de Next.js para el salón, con cuatro partes:
 1. **El examen** (`/examen`): 75 retos de HTML, CSS y JavaScript.
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
-3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado, TypeScript y TypeScript
-   avanzado (10 lecciones × 5 retos cada uno).
+3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado, TypeScript, TypeScript
+   avanzado y Rust desde cero (10 lecciones × 5 retos cada uno).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
@@ -24,6 +24,52 @@ en los cursos y en los proyectos.
 La regla de fondo, en todo: **se escribe, no se pega.**
 
 ## Lo último que se hizo (20 de octubre de 2026)
+
+### Rust desde cero (`/cursos/rust`)
+
+A pedido del profesor: una introducción muy básica a Rust, 10 lecciones × 5 retos (unas
+4 horas y media), **abierta para todos**. El contenido está en `src/lib/cursos/rust.ts`;
+los id son `rs-N` y `rs-N-M`. Lecciones: println! · variables y `mut` · tipos (`i32`,
+`f64`, `bool`, `char`, `&str`, `as f64`) · cuentas (`/` entre enteros, `%`, `+=`,
+`{:.1}`) · textos (`format!`, `len`, `String`, `push_str`) · preguntar y `parse` · `if`
+y `match` · ciclos (`for`, `while`, `loop`) · funciones (lo que devuelve la última línea
+sin `;`) · listas con `Vec`, cerrando con piedra, papel o tijera.
+
+- **Rust no corre en el navegador**: el código se compila en el **Rust Playground
+  oficial** (play.rust-lang.org), como escogió el profesor. La página llama a
+  `/api/rust` (`src/app/api/rust/route.ts`), que llama al Playground, guarda en caché
+  lo repetido (si el salón corre el mismo ejemplo, compila una vez) y pone límites de
+  tamaño. Cada corrida tarda **un par de segundos**; el botón dice "⏳ Compilando…".
+- **Riesgo a vigilar**: el Playground es un servicio gratuito de la comunidad de Rust, sin
+  garantías. Si un día no contesta, el niño ve "El compilador no contestó" (no es culpa
+  de su código). Si con el salón entero empieza a frenar, la salida es montar rustc
+  propio (por ejemplo en un Vercel Sandbox) detrás de la misma ruta `/api/rust`.
+- **Un "Comprobar" es una sola compilación**: `corredor-rust.ts` envuelve el programa
+  del alumno (su `main` pasa a `main_del_alumno`) con un `main` propio que lo corre con
+  cada juego de respuestas y evalúa las expresiones de la revisión (con `{:?}`), todo
+  separado con marcas `\u{1}`. El envoltorio va **al final**, para que las líneas de los
+  errores sean las del alumno. Para eso `calificar` ahora acepta `correr.varios` (lo da
+  `correrCon(lenguaje)` en `motor.ts`); Python y TypeScript siguen igual, uno por uno.
+- **preguntar("…")**: el Playground no tiene teclado, así que la arena le da al alumno
+  esa función (devuelve un String con la respuesta de las cajitas). Las explicaciones
+  dicen que es de la arena y no de Rust.
+- **Ciclos infinitos**: un hilo del envoltorio apaga el programa a los 3 segundos; un
+  chorro de texto lo corta el Playground a los 640 KB. Los dos dan su pista.
+- **Pistas** en `errores-rust.ts`, por código de error (E0384 falta `mut`, E0308 tipos o
+  el `;` de más al devolver, E0277 mezclar i32 con f64 o imprimir una lista con `{}`…),
+  por mensaje (falta `;`, llaves sin cerrar, `{}` que no cuadran) y los vicios de
+  JavaScript (`console.log`, `function`, `===`). Los `panic` también: posición que no
+  existe, `parse` de algo que no es número, dividir por cero, desbordes.
+- **Verificado**: la llave con el `rustc` 1.94 del computador (50 soluciones y 19
+  ejemplos, y los códigos iniciales no pasan solos) y `/verificar-curso?curso=rust` en
+  Chrome contra el Playground de verdad: 69 de 69 en 149 s. `?curso=` es nuevo: revisa
+  un solo curso, porque el de Rust tarda.
+- No hubo que tocar Supabase.
+
+**Pendiente de ver en clase**: si los dos segundos por corrida se sienten lentos, y cómo
+responde el Playground con todo el salón a la vez.
+
+## Antes (20 de octubre de 2026): TypeScript avanzado
 
 ### TypeScript avanzado (`/cursos/typescript-avanzado`)
 

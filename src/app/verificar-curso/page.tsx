@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CURSOS } from '@/lib/cursos'
 import { calificar } from '@/lib/cursos/calificar'
-import { motorDe } from '@/lib/cursos/motor'
-import type { Pedido } from '@/lib/cursos/calificar'
+import { correrCon } from '@/lib/cursos/motor'
 
 /**
  * Autodiagnóstico de los cursos, hermano de /verificar y /verificar-proyecto.
@@ -35,8 +34,11 @@ export default function VerificarCurso() {
         if (vivo) setFilas([...salida])
       }
 
+      // ?curso=rust revisa uno solo: el de Rust compila en el Playground y tarda varios minutos.
+      const solo = new URLSearchParams(window.location.search).get('curso')
       for (const c of CURSOS) {
-        const correr = (p: Pedido) => motorDe(c.lenguaje).correr(p)
+        if (solo && c.id !== solo) continue
+        const correr = correrCon(c.lenguaje)
         for (const l of c.lecciones) {
           for (const [i, b] of l.explicacion.entries()) {
             if (b.t !== 'codigo') continue

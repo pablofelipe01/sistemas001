@@ -31,7 +31,11 @@ export interface Resultado {
   tiempoAgotado?: boolean
 }
 
-export type Correr = (p: Pedido) => Promise<Resultado>
+/**
+ * Corre un pedido. Si además trae `varios`, el motor puede correr varios
+ * pedidos del mismo código de una vez (en Rust, una sola compilación).
+ */
+export type Correr = ((p: Pedido) => Promise<Resultado>) & { varios?: (ps: Pedido[]) => Promise<Resultado[]> }
 
 export interface ResultadoPrueba {
   ok: boolean
@@ -183,17 +187,26 @@ export async function calificar(
     grupos.set(llave(e), g)
   }
 
-  const corridas = new Map<string, Resultado>()
-  for (const [k, g] of grupos) {
+  const llaves = [...grupos.keys()]
+  const pedidos = llaves.map((k) => {
+    const g = grupos.get(k)!
     const pedido: Pedido = { codigo, entradas: g.entradas, expresiones: g.expresiones }
     if (g.revisar.length) pedido.revisar = g.revisar
-    corridas.set(k, await correr(pedido))
+    return pedido
+  })
+  const corridas = new Map<string, Resultado>()
+  if (correr.varios) {
+    const todos = await correr.varios(pedidos)
+    llaves.forEach((k, i) => corridas.set(k, todos[i]))
+  } else {
+    for (const [i, k] of llaves.entries()) corridas.set(k, await correr(pedidos[i]))
   }
 
   const principal = corridas.get(llave(base))!
   const rota =
     [principal, ...corridas.values()].find((r) => r.error || r.tiempoAgotado) ?? null
-  const fuente = lenguaje === 'typescript' ? sinComentariosTS(codigo) : sinComentarios(codigo)
+  // Python comenta con #; TypeScript y Rust, con // y /* */.
+  const fuente = lenguaje === 'python' ? sinComentarios(codigo) : sinComentariosTS(codigo)
 
   const resultados: ResultadoPrueba[] = reto.pruebas.map((p) => {
     if (p.t === 'src') {
