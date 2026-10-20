@@ -155,11 +155,11 @@ export default function Entrada() {
       <section className="panel flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="etiqueta mb-1">Nuevo lenguaje</p>
-          <h2 className="text-sm font-bold text-[#e2e8ff]">🐍 Cursos: Python desde cero</h2>
+          <h2 className="text-sm font-bold text-[#e2e8ff]">🐍 Cursos: Python y TypeScript</h2>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
-            Diez lecciones cortas, cada una con una explicación y cinco retos. Escribes el código, lo corres y ves lo
-            que sale al instante. Desde el primer print hasta tus propias funciones, comparando siempre con el
-            JavaScript que ya sabes.
+            Lecciones cortas, cada una con una explicación y cinco retos. Escribes el código, lo corres y ves lo que
+            sale al instante. Python desde el primer print, o TypeScript: el JavaScript que ya sabes, con tipos que
+            atrapan los errores antes de correr.
           </p>
         </div>
         <a href="/cursos" className="boton boton-primario">

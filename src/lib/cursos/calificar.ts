@@ -1,31 +1,37 @@
-import type { Prueba, Reto } from './tipos'
+import type { Lenguaje, Prueba, Reto } from './tipos'
 
-/* El mismo contrato que public/python/corredor.py. */
+/* El mismo contrato que public/python/corredor.py y public/typescript/corredor.js. */
 
-export interface ErrorPython {
+export interface ErrorDelPrograma {
   tipo: string
   mensaje: string
   linea: number | null
+  /** TypeScript: cuántos errores de tipos hubo en total (se muestra el primero). */
+  cuantos?: number
 }
 
-export type ValorExpr = { valor: string; salida: string } | { error: ErrorPython }
+export type ValorExpr = { valor: string; salida: string } | { error: ErrorDelPrograma }
 
-export interface PedidoPython {
+export interface Pedido {
   codigo: string
   entradas?: string[]
   expresiones?: string[]
   semilla?: number
+  /** TypeScript: pedazos de código que se pegan al final para ver si los tipos se quejan. */
+  revisar?: string[]
 }
 
-export interface ResultadoPython {
+export interface Resultado {
   salida: string
-  error: ErrorPython | null
+  error: ErrorDelPrograma | null
   valores: ValorExpr[]
+  /** Uno por cada pedazo de `revisar`: true si los tipos lo atajaron. */
+  rechazos?: boolean[]
   /** El programa no terminó a tiempo: casi siempre un while que nunca para. */
   tiempoAgotado?: boolean
 }
 
-export type Correr = (p: PedidoPython) => Promise<ResultadoPython>
+export type Correr = (p: Pedido) => Promise<Resultado>
 
 export interface ResultadoPrueba {
   ok: boolean
@@ -36,9 +42,9 @@ export interface Calificacion {
   ok: boolean
   resultados: ResultadoPrueba[]
   /** La corrida con las respuestas del reto: es la que se le muestra al alumno. */
-  principal: ResultadoPython
+  principal: Resultado
   /** Si alguna corrida se rompió, esta es la que se le cuenta. */
-  rota: ResultadoPython | null
+  rota: Resultado | null
 }
 
 /* ------------------------------------------------------------ comparar --- */
@@ -103,6 +109,37 @@ export function sinComentarios(codigo: string) {
   return fuera
 }
 
+/** Lo mismo para TypeScript: comentarios con // y con /* *\/, y textos con comillas o acentos graves. */
+export function sinComentariosTS(codigo: string) {
+  let fuera = ''
+  let comilla: string | null = null
+  for (let i = 0; i < codigo.length; i++) {
+    const c = codigo[i]
+    if (comilla) {
+      fuera += c
+      if (c === '\\') fuera += codigo[++i] ?? ''
+      else if (c === comilla) comilla = null
+      continue
+    }
+    if (codigo.startsWith('//', i)) {
+      while (i < codigo.length && codigo[i] !== '\n') i++
+      fuera += '\n'
+      continue
+    }
+    if (codigo.startsWith('/*', i)) {
+      const fin = codigo.indexOf('*/', i + 2)
+      const tapado = codigo.slice(i, fin === -1 ? codigo.length : fin + 2)
+      // Se dejan los saltos de línea, para que los renglones sigan en su sitio.
+      fuera += tapado.replace(/[^\n]/g, '')
+      i += tapado.length - 1
+      continue
+    }
+    if (c === '"' || c === "'" || c === '`') comilla = c
+    fuera += c
+  }
+  return fuera
+}
+
 function contar(pajar: string, aguja: string) {
   if (!aguja) return 0
   let n = 0
@@ -120,30 +157,43 @@ function llave(entradas: string[] | undefined) {
   return JSON.stringify(entradas ?? [])
 }
 
-export async function calificar(reto: Reto, codigo: string, correr: Correr): Promise<Calificacion> {
+export async function calificar(
+  reto: Reto,
+  codigo: string,
+  correr: Correr,
+  lenguaje: Lenguaje = 'python',
+): Promise<Calificacion> {
   const base = reto.entradas ?? []
   const entradasDe = (p: Prueba) => ('entradas' in p && p.entradas ? p.entradas : base)
 
   // Una corrida por cada juego distinto de respuestas, con todas sus expresiones juntas.
-  const grupos = new Map<string, { entradas: string[]; expresiones: string[] }>()
-  grupos.set(llave(base), { entradas: base, expresiones: [] })
+  // Los pedazos de `rechaza` no dependen de las respuestas: van en la corrida principal.
+  const grupos = new Map<string, { entradas: string[]; expresiones: string[]; revisar: string[] }>()
+  grupos.set(llave(base), { entradas: base, expresiones: [], revisar: [] })
   for (const p of reto.pruebas) {
     if (p.t === 'src') continue
+    if (p.t === 'rechaza') {
+      const g = grupos.get(llave(base))!
+      if (!g.revisar.includes(p.code)) g.revisar.push(p.code)
+      continue
+    }
     const e = entradasDe(p)
-    const g = grupos.get(llave(e)) ?? { entradas: e, expresiones: [] }
+    const g = grupos.get(llave(e)) ?? { entradas: e, expresiones: [], revisar: [] }
     if (p.t === 'expr' && !g.expresiones.includes(p.code)) g.expresiones.push(p.code)
     grupos.set(llave(e), g)
   }
 
-  const corridas = new Map<string, ResultadoPython>()
+  const corridas = new Map<string, Resultado>()
   for (const [k, g] of grupos) {
-    corridas.set(k, await correr({ codigo, entradas: g.entradas, expresiones: g.expresiones }))
+    const pedido: Pedido = { codigo, entradas: g.entradas, expresiones: g.expresiones }
+    if (g.revisar.length) pedido.revisar = g.revisar
+    corridas.set(k, await correr(pedido))
   }
 
   const principal = corridas.get(llave(base))!
   const rota =
     [principal, ...corridas.values()].find((r) => r.error || r.tiempoAgotado) ?? null
-  const fuente = sinComentarios(codigo)
+  const fuente = lenguaje === 'typescript' ? sinComentariosTS(codigo) : sinComentarios(codigo)
 
   const resultados: ResultadoPrueba[] = reto.pruebas.map((p) => {
     if (p.t === 'src') {
@@ -155,6 +205,11 @@ export async function calificar(reto: Reto, codigo: string, correr: Correr): Pro
     const k = llave(entradasDe(p))
     const r = corridas.get(k)!
     if (r.error || r.tiempoAgotado) return { ok: false, msg: p.msg }
+
+    if (p.t === 'rechaza') {
+      const i = grupos.get(k)!.revisar.indexOf(p.code)
+      return { ok: r.rechazos?.[i] === true, msg: p.msg }
+    }
 
     if (p.t === 'expr') {
       const i = grupos.get(k)!.expresiones.indexOf(p.code)

@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import { CursoCerrado } from './CursoCerrado'
 import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
 import { leccionAbierta, leccionActual, minutosDelCurso, retosHechos, totalRetos } from '@/lib/cursos'
-import { motorPython } from '@/lib/cursos/motor-python'
+import { motorDe } from '@/lib/cursos/motor'
 import type { Curso } from '@/lib/cursos/tipos'
 
 /** La lista de lecciones del curso: cuáles van hechas, cuál sigue y cuáles están cerradas. */
@@ -16,10 +16,10 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
   const total = totalRetos(curso)
   const horas = Math.round(minutosDelCurso(curso) / 60)
 
-  // Python pesa: se empieza a cargar desde aquí, mientras el alumno escoge lección.
+  // El motor pesa: se empieza a cargar desde aquí, mientras el alumno escoge lección.
   useEffect(() => {
-    void motorPython().arrancar().catch(() => {})
-  }, [])
+    void motorDe(curso.lenguaje).arrancar().catch(() => {})
+  }, [curso.lenguaje])
 
   if (previo && listo && !abierto) return <CursoCerrado curso={curso} previo={previo} />
 

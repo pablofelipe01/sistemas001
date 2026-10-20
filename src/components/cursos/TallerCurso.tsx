@@ -9,10 +9,10 @@ import { ConCodigo, Explicacion } from './Explicacion'
 import { CursoCerrado } from './CursoCerrado'
 import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
 import { cursoSiguiente, leccionAbierta, retosHechos, totalRetos } from '@/lib/cursos'
-import { calificar, type Calificacion, type ResultadoPython } from '@/lib/cursos/calificar'
-import { explicarError } from '@/lib/cursos/errores-python'
-import { motorPython, type EstadoMotor } from '@/lib/cursos/motor-python'
-import type { Curso, Leccion } from '@/lib/cursos/tipos'
+import { calificar, type Calificacion, type Resultado } from '@/lib/cursos/calificar'
+import { explicarError } from '@/lib/cursos/errores'
+import { motorDe, nombreDelLenguaje, type EstadoMotor } from '@/lib/cursos/motor'
+import type { Curso, Leccion, Lenguaje } from '@/lib/cursos/tipos'
 import { registrarEvento } from '@/lib/storage'
 
 const BURLAS_AL_PEGAR = [
@@ -21,8 +21,17 @@ const BURLAS_AL_PEGAR = [
   '⌨️ Bloqueado. Pregúntale a quien quieras, pero teclea tú.',
 ]
 
-/** ¿El programa usa input()? Entonces hacen falta las cajitas de respuestas. */
-const USA_INPUT = /\binput\s*\(/
+/** Cómo pregunta cada lenguaje. Si el programa pregunta, hacen falta las cajitas de respuestas. */
+const PREGUNTAR: Record<Lenguaje, { funcion: string; re: RegExp }> = {
+  python: { funcion: 'input()', re: /\binput\s*\(/ },
+  typescript: { funcion: 'prompt()', re: /\bprompt\s*\(/ },
+}
+
+/** Lo propio de cada lenguaje en la pantalla del taller. */
+const DETALLES: Record<Lenguaje, { emoji: string; extension: string; imprimir: string }> = {
+  python: { emoji: '🐍', extension: 'py', imprimir: 'print' },
+  typescript: { emoji: '🔷', extension: 'ts', imprimir: 'console.log' },
+}
 
 export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion }) {
   const { nombre, slug, avance, setAvance, cargado } = useAvanceCurso(curso.id)
@@ -34,7 +43,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
   const [indiceReto, setIndiceReto] = useState(0)
   const [codigo, setCodigo] = useState('')
   const [entradas, setEntradas] = useState<string[]>([])
-  const [corrida, setCorrida] = useState<{ r: ResultadoPython; codigo: string } | null>(null)
+  const [corrida, setCorrida] = useState<{ r: Resultado; codigo: string } | null>(null)
   const [calificacion, setCalificacion] = useState<Calificacion | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [pistaAbierta, setPistaAbierta] = useState(false)
@@ -54,13 +63,14 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
   const abierta = !cargado || leccionAbierta(curso, indiceLeccion, avance)
 
   const avisar = useCallback((texto: string, tono: TonoAviso = 'info') => setAviso({ texto, tono }), [])
+  const motorDelCurso = motorDe(curso.lenguaje)
 
   /* ------------------------------------------------------------- arranque */
 
-  useEffect(() => motorPython().escuchar(setMotor), [])
+  useEffect(() => motorDelCurso.escuchar(setMotor), [motorDelCurso])
   useEffect(() => {
-    void motorPython().arrancar().catch(() => {})
-  }, [])
+    void motorDelCurso.arrancar().catch(() => {})
+  }, [motorDelCurso])
 
   // Al cargar el avance: se abre en el primer reto sin hacer. Si la lección ya
   // estaba empezada, directo al reto; si es nueva, primero la explicación.
@@ -91,16 +101,16 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
     if (ocupado) return
     setOcupado(true)
     setCalificacion(null)
-    const r = await motorPython().correr({ codigo, entradas })
+    const r = await motorDelCurso.correr({ codigo, entradas })
     setCorrida({ r, codigo })
     setOcupado(false)
-  }, [codigo, entradas, ocupado])
+  }, [codigo, entradas, ocupado, motorDelCurso])
 
   async function comprobar() {
     if (ocupado) return
     setOcupado(true)
     setAvance((a) => ({ ...a, intentos: { ...a.intentos, [reto.id]: (a.intentos[reto.id] ?? 0) + 1 } }))
-    const c = await calificar(reto, codigo, (p) => motorPython().correr(p))
+    const c = await calificar(reto, codigo, (p) => motorDelCurso.correr(p), curso.lenguaje)
     setCalificacion(c)
     setCorrida({ r: c.rota ?? c.principal, codigo })
     setOcupado(false)
@@ -191,7 +201,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
     )
   }
 
-  const mostrarEntradas = Boolean(reto.entradas) || USA_INPUT.test(codigo)
+  const mostrarEntradas = Boolean(reto.entradas) || PREGUNTAR[curso.lenguaje].re.test(codigo)
   const fallidas = calificacion?.resultados.filter((r) => !r.ok) ?? []
 
   return (
@@ -237,7 +247,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
         </ol>
 
         <div className="ml-auto flex items-center gap-3">
-          <EstadoPython estado={motor} />
+          <EstadoDelMotor lenguaje={curso.lenguaje} estado={motor} />
           <Link href={`/cursos/${curso.id}`} className="boton boton-secundario">
             ← Lecciones
           </Link>
@@ -266,7 +276,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
             {vista === 'explicacion' ? (
               <>
                 <p className="etiqueta mb-3">⏱ Unos {leccion.minutos} minutos, con todo y retos</p>
-                <Explicacion bloques={leccion.explicacion} onIntentoDeCopia={copiaBloqueada} />
+                <Explicacion lenguaje={curso.lenguaje} bloques={leccion.explicacion} onIntentoDeCopia={copiaBloqueada} />
                 <button onClick={() => setVista('reto')} className="boton boton-primario mt-6 w-full">
                   {hechos > 0 ? 'Volver a los retos →' : '¡Entendido! A los retos →'}
                 </button>
@@ -325,7 +335,8 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
             <span className="punto bg-[#fbbf24]" />
             <span className="punto bg-[#4ade80]" />
             <span className="ml-2 text-xs text-[#7f8fb3]">
-              reto_{leccion.numero}_{indiceReto + 1}.py{nombre ? ` — ${nombre}` : ''}
+              reto_{leccion.numero}_{indiceReto + 1}.{DETALLES[curso.lenguaje].extension}
+              {nombre ? ` — ${nombre}` : ''}
             </span>
             <span className="ml-auto text-[10px] text-[#3f5074]">aquí no se pega</span>
           </div>
@@ -334,7 +345,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
             <Terminal
               key={reto.id}
               ref={terminal}
-              lang="python"
+              lang={curso.lenguaje}
               inicial={avance.codigo[reto.id] ?? reto.inicial}
               onCambio={(t) => {
                 setCodigo(t)
@@ -346,7 +357,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
           </div>
 
           {mostrarEntradas && (
-            <CajitasDeEntrada entradas={entradas} onCambio={setEntradas} />
+            <CajitasDeEntrada funcion={PREGUNTAR[curso.lenguaje].funcion} entradas={entradas} onCambio={setEntradas} />
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-[#1e2b45] p-3">
@@ -384,7 +395,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
             <span className="text-xs text-[#7f8fb3]">🖥️ Lo que sale</span>
           </div>
           <div className="min-h-0 flex-1 overflow-auto bg-[#060a14] p-4">
-            <Salida corrida={corrida} motor={motor} />
+            <Salida lenguaje={curso.lenguaje} corrida={corrida} motor={motor} />
           </div>
           {calificacion && (
             <div className="max-h-[45%] overflow-auto border-t border-[#1e2b45] p-4">
@@ -423,30 +434,44 @@ function Pestana({ activa, onClick, children }: { activa: boolean; onClick: () =
   )
 }
 
-function EstadoPython({ estado }: { estado: EstadoMotor }) {
-  if (estado === 'listo') return <span className="text-[11px] text-[#4ade80]">🐍 Python listo</span>
+function EstadoDelMotor({ lenguaje, estado }: { lenguaje: Lenguaje; estado: EstadoMotor }) {
+  const nombre = nombreDelLenguaje(lenguaje)
+  const { emoji } = DETALLES[lenguaje]
+  if (estado === 'listo') return <span className="text-[11px] text-[#4ade80]">{emoji} {nombre} listo</span>
   if (estado === 'fallo') {
     return (
       <button
-        onClick={() => void motorPython().arrancar().catch(() => {})}
+        onClick={() => void motorDe(lenguaje).arrancar().catch(() => {})}
         className="text-[11px] text-[#fb7185] hover:underline"
       >
-        ⚠ No cargó Python · reintentar
+        ⚠ No cargó {nombre} · reintentar
       </button>
     )
   }
-  return <span className="animate-pulse text-[11px] text-[#fbbf24]">🐍 Despertando a Python…</span>
+  return (
+    <span className="animate-pulse text-[11px] text-[#fbbf24]">
+      {emoji} Despertando a {nombre}…
+    </span>
+  )
 }
 
 /**
  * Las respuestas que recibe input(), en orden. En una terminal de verdad el
  * programa se detendría a esperar; aquí se escriben antes de correr.
  */
-function CajitasDeEntrada({ entradas, onCambio }: { entradas: string[]; onCambio: (e: string[]) => void }) {
+function CajitasDeEntrada({
+  funcion,
+  entradas,
+  onCambio,
+}: {
+  funcion: string
+  entradas: string[]
+  onCambio: (e: string[]) => void
+}) {
   return (
     <div className="border-t border-[#1e2b45] bg-[#0b1222] px-3 py-2.5">
       <p className="mb-1.5 text-[10px] text-[#7f8fb3]">
-        💬 Respuestas para <span className="text-[#86efac]">input()</span> — cada input() se lleva la siguiente
+        💬 Respuestas para <span className="text-[#86efac]">{funcion}</span> — cada {funcion} se lleva la siguiente
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         {entradas.map((e, i) => (
@@ -481,26 +506,35 @@ function CajitasDeEntrada({ entradas, onCambio }: { entradas: string[]; onCambio
   )
 }
 
-function Salida({ corrida, motor }: { corrida: { r: ResultadoPython; codigo: string } | null; motor: EstadoMotor }) {
+function Salida({
+  lenguaje,
+  corrida,
+  motor,
+}: {
+  lenguaje: Lenguaje
+  corrida: { r: Resultado; codigo: string } | null
+  motor: EstadoMotor
+}) {
+  const nombre = nombreDelLenguaje(lenguaje)
   if (!corrida) {
     return (
       <p className="text-xs leading-relaxed text-[#3f5074]">
         {motor === 'listo'
           ? 'Dale ▶ Correr para ver lo que hace tu programa. Correr no cuenta como intento: prueba todas las veces que quieras.'
-          : 'Python se está cargando. La primera vez tarda unos segundos; después ya queda listo.'}
+          : `${nombre} se está cargando. La primera vez tarda unos segundos; después ya queda listo.`}
       </p>
     )
   }
 
   const { r, codigo } = corrida
-  const explicado = r.error ? explicarError(r.error, codigo) : null
+  const explicado = r.error ? explicarError(lenguaje, r.error, codigo) : null
 
   return (
     <div className="space-y-3">
       {r.salida ? (
         <pre className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#d6e4ff]">{r.salida}</pre>
       ) : (
-        !r.error && !r.tiempoAgotado && <p className="text-xs italic text-[#5a6b8f]">(Tu programa no imprimió nada. ¿Te faltó un print?)</p>
+        !r.error && !r.tiempoAgotado && <p className="text-xs italic text-[#5a6b8f]">(Tu programa no imprimió nada. ¿Te faltó un {DETALLES[lenguaje].imprimir}?)</p>
       )}
       {r.tiempoAgotado && (
         <div className="rounded-xl border border-[#7f1d3a] bg-[#2a0f1c] p-3">
@@ -514,7 +548,7 @@ function Salida({ corrida, motor }: { corrida: { r: ResultadoPython; codigo: str
         <div className="rounded-xl border border-[#7f1d3a] bg-[#2a0f1c] p-3">
           <p className="text-sm font-bold text-[#ffd7e2]">⚠ {explicado.titulo}</p>
           <p className="mt-1 text-xs leading-relaxed text-[#fbc4d2]">{explicado.pista}</p>
-          <p className="mt-2 font-mono text-[10px] text-[#9f6b7a]">Python dice: {explicado.original}</p>
+          <p className="mt-2 font-mono text-[10px] text-[#9f6b7a]">{nombre} dice: {explicado.original}</p>
         </div>
       )}
     </div>
