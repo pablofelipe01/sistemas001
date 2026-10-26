@@ -2,25 +2,49 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CURSOS, cargarAvanceLocal, cursoCompleto, cursoPorId, minutosDelCurso, totalRetos } from '@/lib/cursos'
+import {
+  CURSOS,
+  cargarAvanceLocal,
+  cargarAvanceNube,
+  cursoCompleto,
+  cursoPorId,
+  fusionarAvance,
+  minutosDelCurso,
+  totalRetos,
+} from '@/lib/cursos'
+import type { AvanceCurso, Curso } from '@/lib/cursos/tipos'
 import { slugificar } from '@/lib/progress'
 
 export default function Cursos() {
   const [hechos, setHechos] = useState<Record<string, number>>({})
-  // Los cursos terminados en este navegador. Si lo terminó en otro computador,
-  // el mapa del curso lo averigua en la nube y lo deja entrar igual.
   const [completos, setCompletos] = useState<string[]>([])
 
   useEffect(() => {
+    let vivo = true
     let slug = ''
     try {
       slug = slugificar(localStorage.getItem('examen-web:activo') || '')
     } catch {
       /* sin almacenamiento, se ve igual pero sin avance */
     }
-    const avances = CURSOS.map((c) => [c, cargarAvanceLocal(c.id, slug)] as const)
-    setHechos(Object.fromEntries(avances.map(([c, a]) => [c.id, a.hechos.length])))
-    setCompletos(avances.filter(([c, a]) => cursoCompleto(c, a)).map(([c]) => c.id))
+    const mostrar = (avances: (readonly [Curso, AvanceCurso])[]) => {
+      setHechos(Object.fromEntries(avances.map(([c, a]) => [c.id, a.hechos.length])))
+      setCompletos(avances.filter(([c, a]) => cursoCompleto(c, a)).map(([c]) => c.id))
+    }
+    // Primero lo del navegador, que es inmediato.
+    const locales = CURSOS.map((c) => [c, cargarAvanceLocal(c.id, slug)] as const)
+    mostrar(locales)
+    if (!slug) return
+    // Luego la nube, por si lo hizo en otro computador o se le borró el navegador.
+    ;(async () => {
+      const avances = await Promise.all(
+        locales.map(async ([c, local]) => [c, fusionarAvance(local, await cargarAvanceNube(c.id, slug))] as const),
+      )
+      if (vivo) mostrar(avances)
+    })()
+    return () => {
+      vivo = false
+    }
   }, [])
 
   return (
