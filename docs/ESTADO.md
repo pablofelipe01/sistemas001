@@ -32,6 +32,9 @@ a las 6:45 PM de Bogotá (`cierre` en `src/lib/examen/python-basico.ts`).
 - **Cada pregunta vale de 0 a 5.** Código: la parte de las pruebas que pasa
   (`src/lib/examen/puntuar.ts`). Selección múltiple: algunas opciones "a medio camino"
   valen 1 o 2. Falso o verdadero: 5 o 0. El alumno **no ve sus puntos**.
+- **Pistas en las de código**: dos por pregunta, con un "¿seguro?" antes. La primera
+  quita 1 punto y la segunda 2 más (todo bien con las dos = 2 de 5; nunca baja de 0).
+  Se guardan en la columna `pistas` y el servidor nunca las deja bajar.
 - **Se califica en `/profesor/examen`**, en el navegador del profesor con Pyodide: sirve
   también para quien no le dio Terminar. CSV para descargar y botón "Dar otra oportunidad"
   (borra el renglón).
