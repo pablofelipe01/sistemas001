@@ -136,6 +136,20 @@ export default function Entrada() {
         ))}
       </section>
 
+      <section className="panel flex flex-wrap items-center justify-between gap-4 border-[#166534] p-5">
+        <div>
+          <p className="etiqueta mb-1">Hoy · una sola oportunidad</p>
+          <h2 className="text-sm font-bold text-[#e2e8ff]">🐍 Examen de Python desde cero</h2>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
+            30 preguntas de escribir código, selección múltiple y falso o verdadero. Lee las reglas antes de empezar:
+            cuando arranca, corre el tiempo.
+          </p>
+        </div>
+        <a href="/examen-python" className="boton boton-primario">
+          Ir al examen ▶
+        </a>
+      </section>
+
       <section className="panel flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="etiqueta mb-1">Antes o después del examen</p>

@@ -1,0 +1,451 @@
+import type { Examen, Pregunta } from './tipos'
+
+/*
+ * Examen de Python desde cero: 30 preguntas sobre las 10 lecciones del curso
+ * (print, cuentas, variables, texto, input, if, for, while, listas y
+ * funciones). 17 son de escribir código, 7 de selección múltiple y 6 de falso
+ * o verdadero, intercaladas y en el orden del curso.
+ *
+ * Las preguntas de código tienen varias pruebas a propósito: cada prueba que
+ * pasa suma, así que quien lo tiene a medias saca puntos a medias.
+ *
+ * Si se cambia una pregunta, abrir /verificar-examen: corre las soluciones.
+ */
+
+const preguntas: Pregunta[] = [
+  {
+    tipo: 'codigo',
+    id: 'exp-1',
+    titulo: 'La bienvenida',
+    enunciado: 'Haz que Python muestre estos dos renglones, exactamente así:\n\nBienvenidos al examen\nVamos con toda',
+    inicial: '',
+    pista: '',
+    solucion: 'print("Bienvenidos al examen")\nprint("Vamos con toda")',
+    pruebas: [
+      { t: 'src', re: '\\bprint\\s*\\(', msg: 'Usa print' },
+      { t: 'linea', n: 0, igual: 'Bienvenidos al examen', msg: 'El primer renglón es “Bienvenidos al examen”' },
+      { t: 'linea', n: 1, igual: 'Vamos con toda', msg: 'El segundo renglón es “Vamos con toda”' },
+      { t: 'salida', igual: 'Bienvenidos al examen\nVamos con toda', msg: 'No sale nada más' },
+    ],
+  },
+  {
+    tipo: 'vf',
+    id: 'exp-2',
+    titulo: 'Texto más texto',
+    codigo: 'print("5" + "3")',
+    afirmacion: 'Este programa muestra 8.',
+    verdadero: false,
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-3',
+    titulo: 'Lo que sobra',
+    enunciado: '¿Qué muestra este programa?',
+    codigo: 'print(17 % 5)',
+    opciones: [
+      { texto: '2', puntos: 5 },
+      { texto: '3', puntos: 1 },
+      { texto: '3.4', puntos: 0 },
+      { texto: '12', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-4',
+    titulo: 'Las ruedas',
+    enunciado:
+      'Una bicicleta tiene 2 ruedas y un carro tiene 4. En el parqueadero hay 7 bicicletas y 5 carros.\n\nHaz que Python calcule cuántas ruedas hay en total y lo muestre. Ojo: la cuenta la hace Python, tú no escribes el resultado.',
+    inicial: '',
+    pista: '',
+    solucion: 'print(2 * 7 + 4 * 5)',
+    pruebas: [
+      { t: 'src', re: '\\bprint\\s*\\(', msg: 'Usa print' },
+      { t: 'src', re: '\\*', msg: 'Multiplica con *' },
+      { t: 'src', re: '\\b34\\b', not: true, msg: 'No escribe el resultado a mano' },
+      { t: 'linea', n: -1, contiene: '34', msg: 'Sale 34' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-5',
+    titulo: 'Las galletas',
+    enunciado:
+      'Crea una variable `galletas` que valga 24 y una variable `amigos` que valga 5.\n\nLuego crea la variable `cada_uno` con cuántas galletas enteras le tocan a cada amigo, y la variable `sobran` con cuántas sobran. Muestra las dos.',
+    inicial: '',
+    pista: '',
+    solucion: 'galletas = 24\namigos = 5\ncada_uno = galletas // amigos\nsobran = galletas % amigos\nprint(cada_uno)\nprint(sobran)',
+    pruebas: [
+      { t: 'expr', code: 'galletas', igual: '24', msg: 'galletas vale 24' },
+      { t: 'expr', code: 'amigos', igual: '5', msg: 'amigos vale 5' },
+      { t: 'expr', code: 'cada_uno', igual: '4', msg: 'cada_uno vale 4 (galletas enteras)' },
+      { t: 'expr', code: 'sobran', igual: '4', msg: 'sobran vale 4' },
+      { t: 'src', re: 'galletas\\s*(//|%)\\s*amigos', msg: 'Hace las cuentas con las variables' },
+    ],
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-6',
+    titulo: 'Nombres de variables',
+    enunciado: '¿Cuál de estos nombres de variable sí funciona en Python?',
+    opciones: [
+      { texto: 'mi_edad', puntos: 5 },
+      { texto: 'mi edad', puntos: 0 },
+      { texto: '2edad', puntos: 0 },
+      { texto: 'mi-edad', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'vf',
+    id: 'exp-7',
+    titulo: 'Lo que devuelve input',
+    codigo: 'respuesta = input("Escribe un número: ")',
+    afirmacion: 'Aunque escriban un número, en respuesta queda guardado un texto (str), no un número.',
+    verdadero: true,
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-8',
+    titulo: 'La presentación',
+    enunciado:
+      'Ya están escritas las variables `nombre` y `edad`. Usando un f-string con esas dos variables, muestra:\n\nMe llamo Luna y tengo 11 años',
+    inicial: 'nombre = "Luna"\nedad = 11\n',
+    pista: '',
+    solucion: 'nombre = "Luna"\nedad = 11\nprint(f"Me llamo {nombre} y tengo {edad} años")',
+    pruebas: [
+      { t: 'src', re: '\\bf["\']', msg: 'Usa un f-string' },
+      { t: 'src', re: '\\{\\s*nombre\\s*\\}', msg: 'Pone {nombre} adentro' },
+      { t: 'src', re: '\\{\\s*edad\\s*\\}', msg: 'Pone {edad} adentro' },
+      { t: 'salida', igual: 'Me llamo Luna y tengo 11 años', msg: 'Sale la frase completa' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-9',
+    titulo: 'El triple',
+    enunciado: 'Pide un número con input() y muestra su triple. Si escriben 7, sale 21.',
+    inicial: '',
+    entradas: ['7'],
+    pista: '',
+    solucion: 'n = int(input("Escribe un número: "))\nprint(n * 3)',
+    pruebas: [
+      { t: 'src', re: '\\binput\\s*\\(', msg: 'Usa input()' },
+      { t: 'src', re: '\\bint\\s*\\(', msg: 'Convierte con int()' },
+      { t: 'linea', n: -1, contiene: '21', msg: 'Con 7, sale 21' },
+      { t: 'linea', n: -1, contiene: '30', entradas: ['10'], msg: 'Con 10, sale 30' },
+    ],
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-10',
+    titulo: 'La nota',
+    enunciado: '¿Qué muestra este programa?',
+    codigo:
+      'nota = 3.5\nif nota >= 4.5:\n    print("Excelente")\nelif nota >= 3:\n    print("Aprobó")\nelif nota >= 2:\n    print("Casi")\nelse:\n    print("Perdió")',
+    opciones: [
+      { texto: 'Aprobó', puntos: 5 },
+      { texto: 'Aprobó y después Casi', puntos: 2 },
+      { texto: 'Casi', puntos: 0 },
+      { texto: 'Excelente', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-11',
+    titulo: '¿Puede votar?',
+    enunciado:
+      'Pregunta la edad con input(). Si tiene 18 años o más, muestra:\nPuede votar\n\nSi no, muestra:\nNo puede votar todavía',
+    inicial: '',
+    entradas: ['20'],
+    pista: '',
+    solucion: 'edad = int(input("¿Cuántos años tienes? "))\nif edad >= 18:\n    print("Puede votar")\nelse:\n    print("No puede votar todavía")',
+    pruebas: [
+      { t: 'src', re: '\\bif\\b', msg: 'Usa if' },
+      { t: 'src', re: '\\belse\\s*:', msg: 'Usa else' },
+      { t: 'linea', n: -1, igual: 'Puede votar', msg: 'Con 20, sale “Puede votar”' },
+      { t: 'linea', n: -1, igual: 'Puede votar', entradas: ['18'], msg: 'Con 18 justo, también puede' },
+      { t: 'linea', n: -1, igual: 'No puede votar todavía', entradas: ['12'], msg: 'Con 12, “No puede votar todavía”' },
+    ],
+  },
+  {
+    tipo: 'vf',
+    id: 'exp-12',
+    titulo: 'Texto por un número',
+    codigo: 'print("Ja" * 3)',
+    afirmacion: 'Este programa muestra JaJaJa.',
+    verdadero: true,
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-13',
+    titulo: 'El termómetro',
+    enunciado:
+      'Pregunta la temperatura (un número entero) con input().\n\n• Si es mayor que 30: Hace calor\n• Si está entre 15 y 30 (los dos incluidos): Está rico\n• Si es menor que 15: Hace frío',
+    inicial: '',
+    entradas: ['35'],
+    pista: '',
+    solucion:
+      't = int(input("Temperatura: "))\nif t > 30:\n    print("Hace calor")\nelif t >= 15:\n    print("Está rico")\nelse:\n    print("Hace frío")',
+    pruebas: [
+      { t: 'src', re: '\\belif\\b', msg: 'Usa elif' },
+      { t: 'linea', n: -1, igual: 'Hace calor', msg: 'Con 35, “Hace calor”' },
+      { t: 'linea', n: -1, igual: 'Está rico', entradas: ['30'], msg: 'Con 30 justo, “Está rico”' },
+      { t: 'linea', n: -1, igual: 'Está rico', entradas: ['15'], msg: 'Con 15 justo, “Está rico”' },
+      { t: 'linea', n: -1, igual: 'Hace frío', entradas: ['8'], msg: 'Con 8, “Hace frío”' },
+    ],
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-14',
+    titulo: 'Contando con range',
+    enunciado: '¿Qué números muestra este programa?',
+    codigo: 'for i in range(1, 5):\n    print(i)',
+    opciones: [
+      { texto: '1, 2, 3, 4', puntos: 5 },
+      { texto: '1, 2, 3, 4, 5', puntos: 2 },
+      { texto: '0, 1, 2, 3, 4', puntos: 1 },
+      { texto: 'Solo el 1 y el 5', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-15',
+    titulo: 'Los pares',
+    enunciado: 'Con un for y range, muestra los números pares del 2 al 20, uno por renglón.',
+    inicial: '',
+    pista: '',
+    solucion: 'for i in range(2, 21, 2):\n    print(i)',
+    pruebas: [
+      { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
+      { t: 'src', re: '\\brange\\s*\\(', msg: 'Usa range' },
+      { t: 'linea', n: 0, igual: '2', msg: 'Empieza en 2' },
+      { t: 'linea', n: -1, igual: '20', msg: 'Termina en 20' },
+      { t: 'salida', igual: '2\n4\n6\n8\n10\n12\n14\n16\n18\n20', msg: 'Salen todos los pares, uno por renglón' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-16',
+    titulo: 'La tabla',
+    enunciado:
+      'Pide un número con input() y muestra su tabla de multiplicar del 1 al 10, así (si escriben 3):\n\n3 x 1 = 3\n3 x 2 = 6\n…\n3 x 10 = 30',
+    inicial: '',
+    entradas: ['3'],
+    pista: '',
+    solucion: 'n = int(input("¿Qué tabla? "))\nfor i in range(1, 11):\n    print(f"{n} x {i} = {n * i}")',
+    pruebas: [
+      { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
+      { t: 'linea', n: -10, igual: '3 x 1 = 3', msg: 'Con 3, empieza en “3 x 1 = 3”' },
+      { t: 'salida', contiene: '3 x 7 = 21', msg: 'Con 3, aparece “3 x 7 = 21”' },
+      { t: 'linea', n: -1, igual: '3 x 10 = 30', msg: 'Con 3, termina en “3 x 10 = 30”' },
+      { t: 'linea', n: -1, igual: '9 x 10 = 90', entradas: ['9'], msg: 'Con 9, termina en “9 x 10 = 90”' },
+    ],
+  },
+  {
+    tipo: 'vf',
+    id: 'exp-17',
+    titulo: 'El while',
+    codigo: 'contador = 0\nwhile contador < 3:\n    print("hola")',
+    afirmacion: 'Este programa muestra hola tres veces y termina.',
+    verdadero: false,
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-18',
+    titulo: 'La posición',
+    enunciado: '¿Qué muestra este programa?',
+    codigo: 'colores = ["rojo", "verde", "azul"]\nprint(colores[1])',
+    opciones: [
+      { texto: 'verde', puntos: 5 },
+      { texto: 'rojo', puntos: 2 },
+      { texto: 'azul', puntos: 0 },
+      { texto: 'Un error', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-19',
+    titulo: 'Cuenta regresiva',
+    enunciado: 'Con un while, muestra los números del 10 al 1, uno por renglón. Al final, muestra: ¡Despegue!',
+    inicial: '',
+    pista: '',
+    solucion: 'n = 10\nwhile n >= 1:\n    print(n)\n    n -= 1\nprint("¡Despegue!")',
+    pruebas: [
+      { t: 'src', re: '\\bwhile\\b', msg: 'Usa while' },
+      { t: 'linea', n: 0, igual: '10', msg: 'Empieza en 10' },
+      { t: 'linea', n: -2, igual: '1', msg: 'El último número es 1' },
+      { t: 'linea', n: -1, contiene: 'Despegue', msg: 'Termina con “¡Despegue!”' },
+      { t: 'salida', contiene: '10\n9\n8\n7\n6\n5\n4\n3\n2\n1', msg: 'Salen todos, del 10 al 1' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-20',
+    titulo: 'La alcancía',
+    enunciado:
+      'Pide números con input(), uno tras otro, y ve sumándolos. Cuando escriban 0, se deja de preguntar y se muestra:\n\nTotal: (la suma)\n\nSi escriben 5, 10, 3 y 0, sale Total: 18',
+    inicial: '',
+    entradas: ['5', '10', '3', '0'],
+    pista: '',
+    solucion:
+      'total = 0\nn = int(input("Número: "))\nwhile n != 0:\n    total += n\n    n = int(input("Número: "))\nprint("Total:", total)',
+    pruebas: [
+      { t: 'src', re: '\\bwhile\\b', msg: 'Usa while' },
+      { t: 'linea', n: -1, contiene: 'Total', msg: 'Al final dice “Total”' },
+      { t: 'linea', n: -1, contiene: '18', msg: 'Con 5, 10, 3 y 0, el total es 18' },
+      { t: 'linea', n: -1, contiene: '7', entradas: ['7', '0'], msg: 'Con 7 y 0, el total es 7' },
+      { t: 'linea', n: -1, contiene: '100', entradas: ['40', '20', '25', '15', '0'], msg: 'Con cinco números también suma bien' },
+    ],
+  },
+  {
+    tipo: 'vf',
+    id: 'exp-21',
+    titulo: 'append',
+    codigo: 'frutas = ["mango", "pera"]\nfrutas.append("uva")',
+    afirmacion: 'Después de estas dos líneas, "uva" queda de última en la lista frutas.',
+    verdadero: true,
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-22',
+    titulo: 'Los colores',
+    enunciado:
+      'Crea una lista `colores` con "rojo", "verde" y "azul" (en minúscula y en ese orden).\n\nDespués agrégale "amarillo" con append, y muestra cuántos colores tiene la lista usando len.',
+    inicial: '',
+    pista: '',
+    solucion: 'colores = ["rojo", "verde", "azul"]\ncolores.append("amarillo")\nprint(len(colores))',
+    pruebas: [
+      { t: 'src', re: '\\[', msg: 'Crea una lista con [ ]' },
+      { t: 'src', re: '\\.append\\s*\\(', msg: 'Usa append' },
+      { t: 'src', re: '\\blen\\s*\\(', msg: 'Usa len' },
+      { t: 'expr', code: 'colores', igual: "['rojo', 'verde', 'azul', 'amarillo']", msg: 'La lista queda con los cuatro colores en orden' },
+      { t: 'linea', n: -1, contiene: '4', msg: 'Sale 4' },
+    ],
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-23',
+    titulo: 'return o print',
+    enunciado: '¿Qué se ve en la pantalla cuando corre este programa?',
+    codigo: 'def saludar(nombre):\n    return "Hola " + nombre\n\nx = saludar("Ana")',
+    opciones: [
+      { texto: 'Nada: el saludo queda guardado en x, pero nadie lo imprime', puntos: 5 },
+      { texto: 'Hola Ana', puntos: 2 },
+      { texto: 'Hola nombre', puntos: 0 },
+      { texto: 'Un error', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-24',
+    titulo: 'El promedio',
+    enunciado:
+      'Ya está escrita la lista `notas`. Con un for, súmalas todas (sin usar sum) y muestra el promedio: la suma dividida entre cuántas notas hay.',
+    inicial: 'notas = [4.0, 3.5, 5.0, 2.5, 4.5]\n',
+    pista: '',
+    solucion: 'notas = [4.0, 3.5, 5.0, 2.5, 4.5]\ntotal = 0\nfor n in notas:\n    total += n\nprint(total / len(notas))',
+    pruebas: [
+      { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
+      { t: 'src', re: '\\bsum\\s*\\(', not: true, msg: 'No usa sum' },
+      { t: 'src', re: '/', msg: 'Divide' },
+      { t: 'linea', n: -1, contiene: '3.9', msg: 'Sale 3.9' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-25',
+    titulo: 'El triángulo',
+    enunciado:
+      'Escribe una función `area_triangulo(base, altura)` que devuelva (con return) el área de un triángulo: base por altura, dividido entre 2.',
+    inicial: '',
+    pista: '',
+    solucion: 'def area_triangulo(base, altura):\n    return base * altura / 2',
+    pruebas: [
+      { t: 'src', re: '\\bdef\\s+area_triangulo\\s*\\(', msg: 'Define area_triangulo con def' },
+      { t: 'src', re: '\\breturn\\b', msg: 'Usa return' },
+      { t: 'expr', code: 'area_triangulo(10, 4)', igual: '20.0', msg: 'area_triangulo(10, 4) da 20.0' },
+      { t: 'expr', code: 'area_triangulo(3, 5)', igual: '7.5', msg: 'area_triangulo(3, 5) da 7.5' },
+    ],
+  },
+  {
+    tipo: 'vf',
+    id: 'exp-26',
+    titulo: 'Las llaves',
+    afirmacion: 'En Python, lo que va dentro de un if se encierra entre llaves { }, igual que en JavaScript.',
+    verdadero: false,
+  },
+  {
+    tipo: 'opcion',
+    id: 'exp-27',
+    titulo: 'Sumando en el for',
+    enunciado: '¿Qué muestra este programa?',
+    codigo: 'total = 0\nfor n in [2, 4, 6]:\n    total = total + n\nprint(total)',
+    opciones: [
+      { texto: '12', puntos: 5 },
+      { texto: '6', puntos: 1 },
+      { texto: '2, 6 y 12, uno por renglón', puntos: 2 },
+      { texto: '0', puntos: 0 },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-28',
+    titulo: '¿Es par?',
+    enunciado: 'Escribe una función `es_par(n)` que devuelva True si n es par y False si no lo es.',
+    inicial: '',
+    pista: '',
+    solucion: 'def es_par(n):\n    return n % 2 == 0',
+    pruebas: [
+      { t: 'src', re: '\\bdef\\s+es_par\\s*\\(', msg: 'Define es_par con def' },
+      { t: 'src', re: '%', msg: 'Usa % para ver el sobrante' },
+      { t: 'expr', code: 'es_par(4)', igual: 'True', msg: 'es_par(4) da True' },
+      { t: 'expr', code: 'es_par(7)', igual: 'False', msg: 'es_par(7) da False' },
+      { t: 'expr', code: 'es_par(0)', igual: 'True', msg: 'es_par(0) da True' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-29',
+    titulo: 'El mayor',
+    enunciado: 'Escribe una función `mayor(a, b)` que devuelva el más grande de los dos números. Sin usar max: con if.',
+    inicial: '',
+    pista: '',
+    solucion: 'def mayor(a, b):\n    if a > b:\n        return a\n    else:\n        return b',
+    pruebas: [
+      { t: 'src', re: '\\bdef\\s+mayor\\s*\\(', msg: 'Define mayor con def' },
+      { t: 'src', re: '\\bmax\\s*\\(', not: true, msg: 'No usa max' },
+      { t: 'expr', code: 'mayor(3, 8)', igual: '8', msg: 'mayor(3, 8) da 8' },
+      { t: 'expr', code: 'mayor(10, 2)', igual: '10', msg: 'mayor(10, 2) da 10' },
+      { t: 'expr', code: 'mayor(5, 5)', igual: '5', msg: 'mayor(5, 5) da 5' },
+    ],
+  },
+  {
+    tipo: 'codigo',
+    id: 'exp-30',
+    titulo: 'La lista del mercado',
+    enunciado:
+      'Pide 3 productos con input(), uno por uno, y guárdalos en una lista con append. Al final, muestra cada producto con su número, así (si escriben pan, leche y huevos):\n\n1. pan\n2. leche\n3. huevos',
+    inicial: 'mercado = []\n',
+    entradas: ['pan', 'leche', 'huevos'],
+    pista: '',
+    solucion:
+      'mercado = []\nfor i in range(3):\n    mercado.append(input("Producto: "))\nfor i in range(len(mercado)):\n    print(f"{i + 1}. {mercado[i]}")',
+    pruebas: [
+      { t: 'src', re: '\\binput\\s*\\(', msg: 'Usa input()' },
+      { t: 'src', re: '\\.append\\s*\\(', msg: 'Usa append' },
+      { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
+      { t: 'linea', n: -3, igual: '1. pan', msg: 'Con pan, leche y huevos sale “1. pan”' },
+      { t: 'linea', n: -1, igual: '3. huevos', msg: 'y al final “3. huevos”' },
+      { t: 'linea', n: -2, igual: '2. queso', entradas: ['arroz', 'queso', 'uvas'], msg: 'Con arroz, queso y uvas, el segundo es “2. queso”' },
+    ],
+  },
+]
+
+export const EXAMEN_PYTHON: Examen = {
+  id: 'python-basico',
+  titulo: 'Examen de Python desde cero',
+  emoji: '🐍',
+  // Hoy, 28 de octubre de 2026, a las 6:45 de la tarde en Bogotá (UTC−5).
+  cierre: '2026-10-28T18:45:00-05:00',
+  cierreTexto: 'hoy a las 6:45 PM (hora de Bogotá)',
+  preguntas,
+}

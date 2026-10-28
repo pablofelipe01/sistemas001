@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 20 de octubre de 2026 (Rust avanzado)
+Última actualización: 28 de octubre de 2026 (examen de Python)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -23,7 +23,30 @@ en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (20 de octubre de 2026)
+## Lo último que se hizo (28 de octubre de 2026): examen de Python
+
+`/examen-python`: 30 preguntas sobre Python desde cero (17 de código, 7 de selección
+múltiple, 6 de falso o verdadero), una sola oportunidad, cierre automático el 28-oct-2026
+a las 6:45 PM de Bogotá (`cierre` en `src/lib/examen/python-basico.ts`).
+
+- **Cada pregunta vale de 0 a 5.** Código: la parte de las pruebas que pasa
+  (`src/lib/examen/puntuar.ts`). Selección múltiple: algunas opciones "a medio camino"
+  valen 1 o 2. Falso o verdadero: 5 o 0. El alumno **no ve sus puntos**.
+- **Se califica en `/profesor/examen`**, en el navegador del profesor con Pyodide: sirve
+  también para quien no le dio Terminar. CSV para descargar y botón "Dar otra oportunidad"
+  (borra el renglón).
+- **La única oportunidad la cuida el servidor** (`/api/examen`, tabla `examenes`): quien ya
+  tiene `fin` no vuelve a empezar; después del cierre (+60 s) no se recibe nada. Si recarga
+  a mitad, sigue donde iba con el mismo reloj. El computador también recuerda que ya lo
+  entregó.
+- **Vigilancia**: no se pega ni se copia en toda la página; salir de la página tapa el
+  examen y cuenta salidas y segundos fuera; Imprimir pantalla y Cmd/Win+Shift tapan y
+  cuentan "capturas"; marca de agua con el nombre; no se imprime. **No es a prueba de
+  balas**: una foto con el celular no se puede impedir.
+- La llave se probó con el Python del computador (`corredor.py`): las 17 soluciones dan 5,
+  el código vacío da 0.
+
+## Antes (20 de octubre de 2026)
 
 ### Rust avanzado (`/cursos/rust-avanzado`)
 

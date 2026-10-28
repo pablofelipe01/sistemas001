@@ -191,3 +191,10 @@ body {
   background: #2f4067;
   background-clip: content-box;
 }
+
+/* El examen no se imprime: ni Ctrl+P ni el menú del navegador. */
+@media print {
+  body {
+    display: none !important;
+  }
+}
