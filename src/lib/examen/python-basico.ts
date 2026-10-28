@@ -7,7 +7,8 @@ import type { Examen, Pregunta } from './tipos'
  * o verdadero, intercaladas y en el orden del curso.
  *
  * Las preguntas de código tienen varias pruebas a propósito: cada prueba que
- * pasa suma, así que quien lo tiene a medias saca puntos a medias.
+ * pasa suma, así que quien lo tiene a medias saca puntos a medias. Y cada una
+ * trae dos pistas: la primera orienta, la segunda casi muestra el código.
  *
  * Si se cambia una pregunta, abrir /verificar-examen: corre las soluciones.
  */
@@ -20,6 +21,7 @@ const preguntas: Pregunta[] = [
     enunciado: 'Haz que Python muestre estos dos renglones, exactamente así:\n\nBienvenidos al examen\nVamos con toda',
     inicial: '',
     pista: '',
+    pistas: ["Cada renglón es un print aparte.", "Son dos líneas: print(\"Bienvenidos al examen\") y otra igual con la segunda frase."],
     solucion: 'print("Bienvenidos al examen")\nprint("Vamos con toda")',
     pruebas: [
       { t: 'src', re: '\\bprint\\s*\\(', msg: 'Usa print' },
@@ -57,6 +59,7 @@ const preguntas: Pregunta[] = [
       'Una bicicleta tiene 2 ruedas y un carro tiene 4. En el parqueadero hay 7 bicicletas y 5 carros.\n\nHaz que Python calcule cuántas ruedas hay en total y lo muestre. Ojo: la cuenta la hace Python, tú no escribes el resultado.',
     inicial: '',
     pista: '',
+    pistas: ["Primero las ruedas de las bicicletas (2 por cada una), después las de los carros, y súmalas.", "Dentro de un solo print: 2 * 7 + 4 * 5"],
     solucion: 'print(2 * 7 + 4 * 5)',
     pruebas: [
       { t: 'src', re: '\\bprint\\s*\\(', msg: 'Usa print' },
@@ -73,6 +76,7 @@ const preguntas: Pregunta[] = [
       'Crea una variable `galletas` que valga 24 y una variable `amigos` que valga 5.\n\nLuego crea la variable `cada_uno` con cuántas galletas enteras le tocan a cada amigo, y la variable `sobran` con cuántas sobran. Muestra las dos.',
     inicial: '',
     pista: '',
+    pistas: ["Para galletas enteras se usa // (división entera). Para lo que sobra, % (el sobrante).", "cada_uno = galletas // amigos y sobran = galletas % amigos. Después, un print para cada una."],
     solucion: 'galletas = 24\namigos = 5\ncada_uno = galletas // amigos\nsobran = galletas % amigos\nprint(cada_uno)\nprint(sobran)',
     pruebas: [
       { t: 'expr', code: 'galletas', igual: '24', msg: 'galletas vale 24' },
@@ -110,6 +114,7 @@ const preguntas: Pregunta[] = [
       'Ya están escritas las variables `nombre` y `edad`. Usando un f-string con esas dos variables, muestra:\n\nMe llamo Luna y tengo 11 años',
     inicial: 'nombre = "Luna"\nedad = 11\n',
     pista: '',
+    pistas: ["Un f-string lleva una f pegada antes de las comillas, y las variables van entre llaves { }.", "print(f\"Me llamo {nombre} y tengo … años\"): completa lo que falta con la otra variable."],
     solucion: 'nombre = "Luna"\nedad = 11\nprint(f"Me llamo {nombre} y tengo {edad} años")',
     pruebas: [
       { t: 'src', re: '\\bf["\']', msg: 'Usa un f-string' },
@@ -126,6 +131,7 @@ const preguntas: Pregunta[] = [
     inicial: '',
     entradas: ['7'],
     pista: '',
+    pistas: ["input() devuelve texto: conviértelo a número con int() antes de multiplicar.", "n = int(input(\"Escribe un número: \")) y después muestra n * 3."],
     solucion: 'n = int(input("Escribe un número: "))\nprint(n * 3)',
     pruebas: [
       { t: 'src', re: '\\binput\\s*\\(', msg: 'Usa input()' },
@@ -157,6 +163,7 @@ const preguntas: Pregunta[] = [
     inicial: '',
     entradas: ['20'],
     pista: '',
+    pistas: ["Convierte la edad con int(). “Mayor o igual” se escribe >=.", "if edad >= 18: con su print adentro (4 espacios de sangría), y else: con el otro print."],
     solucion: 'edad = int(input("¿Cuántos años tienes? "))\nif edad >= 18:\n    print("Puede votar")\nelse:\n    print("No puede votar todavía")',
     pruebas: [
       { t: 'src', re: '\\bif\\b', msg: 'Usa if' },
@@ -183,6 +190,7 @@ const preguntas: Pregunta[] = [
     inicial: '',
     entradas: ['35'],
     pista: '',
+    pistas: ["Son tres casos: if, elif y else. Ojo con los bordes: con 30 y con 15 es “Está rico”.", "if t > 30: … elif t >= 15: … else: … (cada print con sangría)."],
     solucion:
       't = int(input("Temperatura: "))\nif t > 30:\n    print("Hace calor")\nelif t >= 15:\n    print("Está rico")\nelse:\n    print("Hace frío")',
     pruebas: [
@@ -213,6 +221,7 @@ const preguntas: Pregunta[] = [
     enunciado: 'Con un for y range, muestra los números pares del 2 al 20, uno por renglón.',
     inicial: '',
     pista: '',
+    pistas: ["range puede recibir tres números: dónde empieza, dónde para (sin incluirlo) y de cuánto en cuánto salta.", "for i in range(2, 21, 2): y adentro print(i)."],
     solucion: 'for i in range(2, 21, 2):\n    print(i)',
     pruebas: [
       { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
@@ -231,6 +240,7 @@ const preguntas: Pregunta[] = [
     inicial: '',
     entradas: ['3'],
     pista: '',
+    pistas: ["Convierte el número con int() y usa un for con range(1, 11). Un f-string arma cada renglón.", "Adentro del for: print(f\"{n} x {i} = {n * i}\")"],
     solucion: 'n = int(input("¿Qué tabla? "))\nfor i in range(1, 11):\n    print(f"{n} x {i} = {n * i}")',
     pruebas: [
       { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
@@ -268,6 +278,7 @@ const preguntas: Pregunta[] = [
     enunciado: 'Con un while, muestra los números del 10 al 1, uno por renglón. Al final, muestra: ¡Despegue!',
     inicial: '',
     pista: '',
+    pistas: ["Crea una variable que empiece en 10 y réstale 1 en cada vuelta. El print del final va por fuera del while (sin sangría).", "n = 10 y while n >= 1:, adentro print(n) y n -= 1. Al final, print(\"¡Despegue!\")."],
     solucion: 'n = 10\nwhile n >= 1:\n    print(n)\n    n -= 1\nprint("¡Despegue!")',
     pruebas: [
       { t: 'src', re: '\\bwhile\\b', msg: 'Usa while' },
@@ -286,6 +297,7 @@ const preguntas: Pregunta[] = [
     inicial: '',
     entradas: ['5', '10', '3', '0'],
     pista: '',
+    pistas: ["Necesitas una variable total que empiece en 0, y un while que siga mientras el número no sea 0 (!=).", "Pide el primer número antes del while; adentro súmalo (total += n) y pide el siguiente. Al final, print(\"Total:\", total)."],
     solucion:
       'total = 0\nn = int(input("Número: "))\nwhile n != 0:\n    total += n\n    n = int(input("Número: "))\nprint("Total:", total)',
     pruebas: [
@@ -312,6 +324,7 @@ const preguntas: Pregunta[] = [
       'Crea una lista `colores` con "rojo", "verde" y "azul" (en minúscula y en ese orden).\n\nDespués agrégale "amarillo" con append, y muestra cuántos colores tiene la lista usando len.',
     inicial: '',
     pista: '',
+    pistas: ["Una lista va entre corchetes, con los textos entre comillas y separados por comas.", "colores = [\"rojo\", \"verde\", \"azul\"], después colores.append(\"amarillo\") y print(len(colores))."],
     solucion: 'colores = ["rojo", "verde", "azul"]\ncolores.append("amarillo")\nprint(len(colores))',
     pruebas: [
       { t: 'src', re: '\\[', msg: 'Crea una lista con [ ]' },
@@ -342,6 +355,7 @@ const preguntas: Pregunta[] = [
       'Ya está escrita la lista `notas`. Con un for, súmalas todas (sin usar sum) y muestra el promedio: la suma dividida entre cuántas notas hay.',
     inicial: 'notas = [4.0, 3.5, 5.0, 2.5, 4.5]\n',
     pista: '',
+    pistas: ["Crea total = 0 antes del for y en cada vuelta súmale la nota. len(notas) dice cuántas hay.", "for n in notas: y adentro total += n. Al final, print(total / len(notas))."],
     solucion: 'notas = [4.0, 3.5, 5.0, 2.5, 4.5]\ntotal = 0\nfor n in notas:\n    total += n\nprint(total / len(notas))',
     pruebas: [
       { t: 'src', re: '\\bfor\\b', msg: 'Usa for' },
@@ -358,6 +372,7 @@ const preguntas: Pregunta[] = [
       'Escribe una función `area_triangulo(base, altura)` que devuelva (con return) el área de un triángulo: base por altura, dividido entre 2.',
     inicial: '',
     pista: '',
+    pistas: ["Una función empieza con def, el nombre y los parámetros entre paréntesis, y termina en dos puntos.", "def area_triangulo(base, altura): y adentro return base * altura / 2"],
     solucion: 'def area_triangulo(base, altura):\n    return base * altura / 2',
     pruebas: [
       { t: 'src', re: '\\bdef\\s+area_triangulo\\s*\\(', msg: 'Define area_triangulo con def' },
@@ -393,6 +408,7 @@ const preguntas: Pregunta[] = [
     enunciado: 'Escribe una función `es_par(n)` que devuelva True si n es par y False si no lo es.',
     inicial: '',
     pista: '',
+    pistas: ["Un número es par si al dividirlo entre 2 no sobra nada: n % 2 da 0.", "def es_par(n): y adentro return n % 2 == 0"],
     solucion: 'def es_par(n):\n    return n % 2 == 0',
     pruebas: [
       { t: 'src', re: '\\bdef\\s+es_par\\s*\\(', msg: 'Define es_par con def' },
@@ -409,6 +425,7 @@ const preguntas: Pregunta[] = [
     enunciado: 'Escribe una función `mayor(a, b)` que devuelva el más grande de los dos números. Sin usar max: con if.',
     inicial: '',
     pista: '',
+    pistas: ["Compara a y b con un if, y devuelve con return el que sea más grande.", "if a > b: return a, y si no (else:) return b."],
     solucion: 'def mayor(a, b):\n    if a > b:\n        return a\n    else:\n        return b',
     pruebas: [
       { t: 'src', re: '\\bdef\\s+mayor\\s*\\(', msg: 'Define mayor con def' },
@@ -427,6 +444,7 @@ const preguntas: Pregunta[] = [
     inicial: 'mercado = []\n',
     entradas: ['pan', 'leche', 'huevos'],
     pista: '',
+    pistas: ["Usa un for con range(3) para preguntar tres veces, y append para meter cada respuesta en la lista.", "Para mostrarlos, otro for con range(len(mercado)) y print(f\"{i + 1}. {mercado[i]}\")"],
     solucion:
       'mercado = []\nfor i in range(3):\n    mercado.append(input("Producto: "))\nfor i in range(len(mercado)):\n    print(f"{i + 1}. {mercado[i]}")',
     pruebas: [

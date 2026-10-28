@@ -1,8 +1,10 @@
 import { calificar, type Correr, type ResultadoPrueba } from '../cursos/calificar'
-import { PUNTOS_POR_PREGUNTA, type Pregunta, type Respuesta } from './tipos'
+import { COSTO_PISTAS, PUNTOS_POR_PREGUNTA, type Pregunta, type Respuesta } from './tipos'
 
 export interface Puntaje {
   puntos: number
+  /** Lo que se le quitó por las pistas (ya está restado en puntos). */
+  descuento?: number
   /** Solo en las de código: cada prueba, para que el profesor vea qué le faltó. */
   pruebas?: ResultadoPrueba[]
 }
@@ -18,16 +20,20 @@ export function contestada(p: Pregunta, r: Respuesta | undefined): boolean {
  * De 0 a 5. En el código, la parte de las pruebas que pasa (si pasa la mitad,
  * saca la mitad). En la selección múltiple, lo que valga la opción escogida.
  * En falso o verdadero, 5 o 0.
+ *
+ * Las pistas se restan al final: la primera quita 1 y la segunda 2 más, así
+ * que todo bien con las dos pistas da 2. Nunca baja de 0.
  */
-export async function puntuar(p: Pregunta, r: Respuesta | undefined, correr: Correr): Promise<Puntaje> {
+export async function puntuar(p: Pregunta, r: Respuesta | undefined, correr: Correr, pistas = 0): Promise<Puntaje> {
   if (!contestada(p, r)) return { puntos: 0 }
   if (p.tipo === 'opcion') return { puntos: typeof r === 'number' ? (p.opciones[r]?.puntos ?? 0) : 0 }
   if (p.tipo === 'vf') return { puntos: r === p.verdadero ? PUNTOS_POR_PREGUNTA : 0 }
 
   const c = await calificar(p, r as string, correr, 'python')
   const bien = c.resultados.filter((x) => x.ok).length
-  const puntos = Math.round((PUNTOS_POR_PREGUNTA * bien) / c.resultados.length)
-  return { puntos, pruebas: c.resultados }
+  const ganados = Math.round((PUNTOS_POR_PREGUNTA * bien) / c.resultados.length)
+  const descuento = COSTO_PISTAS[Math.min(Math.max(pistas, 0), 2)]
+  return { puntos: Math.max(0, ganados - descuento), descuento, pruebas: c.resultados }
 }
 
 /** Un número sacado del texto, siempre el mismo para el mismo texto. */

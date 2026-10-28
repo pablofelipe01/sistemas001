@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 /** Lo que llega tarde por la red se recibe hasta este margen después del cierre. */
 const GRACIA_MS = 60_000
 
-const COLUMNAS = 'slug, examen, nombre, inicio, fin, terminado_por, respuestas, salidas, segundos_fuera, pegados, capturas, teclas, actualizado'
+const COLUMNAS = 'slug, examen, nombre, inicio, fin, terminado_por, respuestas, pistas, salidas, segundos_fuera, pegados, capturas, teclas, actualizado'
 
 interface Cuerpo {
   accion?: 'empezar' | 'guardar' | 'terminar' | 'profesor' | 'reabrir'
@@ -16,11 +16,26 @@ interface Cuerpo {
   nombre?: string
   clave?: string
   respuestas?: Record<string, unknown>
+  pistas?: Record<string, unknown>
   salidas?: number
   segundos_fuera?: number
   pegados?: number
   capturas?: number
   teclas?: number
+}
+
+/**
+ * Las pistas solo suben: una pista abierta ya se vio, así que aunque llegue un
+ * guardado viejo (otra pestaña, una página sin recargar) no se puede devolver.
+ */
+function juntarPistas(antes: unknown, nuevas: unknown): Record<string, number> {
+  const fuera: Record<string, number> = { ...((antes as Record<string, number>) ?? {}) }
+  if (nuevas && typeof nuevas === 'object') {
+    for (const [id, n] of Object.entries(nuevas)) {
+      if (typeof n === 'number' && n > 0) fuera[id] = Math.min(2, Math.max(fuera[id] ?? 0, Math.round(n)))
+    }
+  }
+  return fuera
 }
 
 const entero = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n >= 0 ? Math.round(n) : 0)
@@ -106,6 +121,7 @@ export async function POST(req: Request) {
     const cambios: Record<string, unknown> = { actualizado: new Date(ahora).toISOString() }
     if (!tarde) {
       if (b.respuestas && typeof b.respuestas === 'object') cambios.respuestas = b.respuestas
+      cambios.pistas = juntarPistas(fila.pistas, b.pistas)
       cambios.salidas = entero(b.salidas)
       cambios.segundos_fuera = entero(b.segundos_fuera)
       cambios.pegados = entero(b.pegados)

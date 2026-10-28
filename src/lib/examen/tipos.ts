@@ -10,8 +10,14 @@ import type { Reto } from '../cursos/tipos'
  * ejecución, para que la llave se pueda probar fuera del navegador.
  */
 
-/** Escribir un programa. Se califica con las pruebas del reto, igual que en el curso. */
-export type PreguntaCodigo = { tipo: 'codigo' } & Reto
+/**
+ * Escribir un programa. Se califica con las pruebas del reto, igual que en el
+ * curso. Trae dos pistas que el alumno puede abrir, pero cuestan puntos.
+ */
+export type PreguntaCodigo = { tipo: 'codigo'; pistas: [string, string] } & Reto
+
+/** Lo que cuesta abrir pistas: la primera quita 1 punto y la segunda 2 más (3 en total). */
+export const COSTO_PISTAS = [0, 1, 3]
 
 export interface Opcion {
   texto: string
@@ -64,6 +70,8 @@ export interface Presentacion {
   /** 'alumno': le dio Terminar; 'cierre': se acabó la hora. */
   terminado_por: 'alumno' | 'cierre' | null
   respuestas: Record<string, Respuesta>
+  /** Cuántas pistas abrió en cada pregunta de código (0, 1 o 2). */
+  pistas: Record<string, number>
   /** Cuántas veces salió de la página del examen y cuántos segundos estuvo afuera en total. */
   salidas: number
   segundos_fuera: number

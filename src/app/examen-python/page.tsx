@@ -9,7 +9,7 @@ import { motorDe, type EstadoMotor } from '@/lib/cursos/motor'
 import type { Resultado } from '@/lib/cursos/calificar'
 import { EXAMEN_PYTHON } from '@/lib/examen/python-basico'
 import { contestada, ordenDeOpciones } from '@/lib/examen/puntuar'
-import type { Pregunta, Respuesta } from '@/lib/examen/tipos'
+import { COSTO_PISTAS, type Pregunta, type Respuesta } from '@/lib/examen/tipos'
 import { slugificar } from '@/lib/progress'
 
 const EXAMEN = EXAMEN_PYTHON
@@ -33,6 +33,7 @@ interface Local {
   nombre: string
   terminado?: boolean
   respuestas: Record<string, Respuesta>
+  pistas?: Record<string, number>
 }
 
 const CERO: Contadores = { salidas: 0, segundos_fuera: 0, pegados: 0, capturas: 0, teclas: 0 }
@@ -86,6 +87,7 @@ export default function ExamenPython() {
   const [enviando, setEnviando] = useState(false)
 
   const [respuestas, setRespuestas] = useState<Record<string, Respuesta>>({})
+  const [pistas, setPistas] = useState<Record<string, number>>({})
   const [contadores, setContadores] = useState<Contadores>(CERO)
   const [actual, setActual] = useState(0)
   const [inicio, setInicio] = useState(0)
@@ -98,8 +100,8 @@ export default function ExamenPython() {
   const [motor, setMotor] = useState<EstadoMotor>('apagado')
 
   // Lo último, para guardar desde los temporizadores sin depender del render.
-  const ultimo = useRef({ slug, nombre, respuestas, contadores })
-  ultimo.current = { slug, nombre, respuestas, contadores }
+  const ultimo = useRef({ slug, nombre, respuestas, pistas, contadores })
+  ultimo.current = { slug, nombre, respuestas, pistas, contadores }
   const terminando = useRef(false)
 
   const avisar = useCallback((texto: string, tono: TonoAviso = 'alerta') => setAviso({ texto, tono }), [])
@@ -137,6 +139,12 @@ export default function ExamenPython() {
         const deLaNube: Record<string, Respuesta> = p?.respuestas ?? {}
         const deAqui = local?.slug === slugAbrir ? local.respuestas : {}
         const juntas = { ...deAqui, ...deLaNube }
+        // Las pistas abiertas se quedan abiertas: gana el número más alto.
+        const pistasJuntas: Record<string, number> = { ...(local?.slug === slugAbrir ? local.pistas : {}) }
+        for (const [id, n] of Object.entries((p?.pistas ?? {}) as Record<string, number>)) {
+          pistasJuntas[id] = Math.max(pistasJuntas[id] ?? 0, n)
+        }
+        setPistas(pistasJuntas)
         setSlug(slugAbrir)
         setNombre(p?.nombre ?? nombreAbrir)
         setRespuestas(juntas)
@@ -146,7 +154,7 @@ export default function ExamenPython() {
             : CERO,
         )
         setInicio(p ? Date.parse(p.inicio) : Date.now() + (d.ahora ? Date.parse(d.ahora) - Date.now() : 0))
-        guardarLocal({ slug: slugAbrir, nombre: p?.nombre ?? nombreAbrir, respuestas: juntas })
+        guardarLocal({ slug: slugAbrir, nombre: p?.nombre ?? nombreAbrir, respuestas: juntas, pistas: pistasJuntas })
         const pendiente = PREGUNTAS.findIndex((q) => !contestada(q, juntas[q.id]))
         setActual(pendiente === -1 ? 0 : pendiente)
         setFase('examen')
@@ -179,9 +187,9 @@ export default function ExamenPython() {
   const guardar = useCallback(async (accion: 'guardar' | 'terminar', keepalive = false) => {
     const u = ultimo.current
     if (!u.slug) return null
-    guardarLocal({ slug: u.slug, nombre: u.nombre, respuestas: u.respuestas, terminado: accion === 'terminar' || undefined })
+    guardarLocal({ slug: u.slug, nombre: u.nombre, respuestas: u.respuestas, pistas: u.pistas, terminado: accion === 'terminar' || undefined })
     try {
-      return await pedir({ accion, slug: u.slug, respuestas: u.respuestas, ...u.contadores }, keepalive)
+      return await pedir({ accion, slug: u.slug, respuestas: u.respuestas, pistas: u.pistas, ...u.contadores }, keepalive)
     } catch {
       return null
     }
@@ -198,7 +206,7 @@ export default function ExamenPython() {
       if (!d) d = await guardar('terminar')
       setEnviando(false)
       const u = ultimo.current
-      guardarLocal({ slug: u.slug, nombre: u.nombre, respuestas: u.respuestas, terminado: true })
+      guardarLocal({ slug: u.slug, nombre: u.nombre, respuestas: u.respuestas, pistas: u.pistas, terminado: true })
       setFin(Date.now() + desfase)
       setFase('entregado')
       if (porCierre) avisar('Se acabó el tiempo: el examen se entregó solo con lo que llevabas.', 'info')
@@ -211,7 +219,7 @@ export default function ExamenPython() {
     if (fase !== 'examen') return
     const t = window.setTimeout(() => void guardar('guardar'), 2000)
     return () => window.clearTimeout(t)
-  }, [respuestas, contadores, fase, guardar])
+  }, [respuestas, pistas, contadores, fase, guardar])
 
   useEffect(() => {
     if (fase !== 'examen') return
@@ -336,10 +344,21 @@ export default function ExamenPython() {
     setRespuestas((rs) => {
       const n = { ...rs, [id]: r }
       const u = ultimo.current
-      guardarLocal({ slug: u.slug, nombre: u.nombre, respuestas: n })
+      guardarLocal({ slug: u.slug, nombre: u.nombre, respuestas: n, pistas: u.pistas })
       return n
     })
   }, [])
+
+  // Abrir una pista se guarda de una vez: ya la vio, y le cuesta puntos aunque cierre la página.
+  const abrirPista = useCallback(
+    (id: string) => {
+      const n = { ...ultimo.current.pistas, [id]: Math.min(2, (ultimo.current.pistas[id] ?? 0) + 1) }
+      ultimo.current = { ...ultimo.current, pistas: n }
+      setPistas(n)
+      void guardar('guardar')
+    },
+    [guardar],
+  )
 
   const hechas = PREGUNTAS.filter((q) => contestada(q, respuestas[q.id])).length
 
@@ -423,6 +442,10 @@ export default function ExamenPython() {
             </li>
             <li>
               <b>⭐ Cada pregunta vale de 0 a 5 puntos.</b> Si la tienes a medias, también suma: escribe lo que sepas.
+            </li>
+            <li>
+              <b>💡 Las preguntas de código tienen 2 pistas, pero cuestan.</b> La primera te quita 1 punto y la segunda 2
+              más: si la resuelves bien con las dos pistas, sacas 2 de 5. Úsalas solo si de verdad te atascas.
             </li>
             <li>
               <b>⌨️ Todo se escribe con tus dedos.</b> No se puede copiar ni pegar, y no se vale usar inteligencia
@@ -550,6 +573,8 @@ export default function ExamenPython() {
             numero={actual + 1}
             slug={slug}
             respuesta={respuestas[p.id]}
+            pistasAbiertas={pistas[p.id] ?? 0}
+            onAbrirPista={() => abrirPista(p.id)}
             motor={motor}
             onResponder={(r) => responder(p.id, r)}
             onTeclas={(n) => setContadores((c) => ({ ...c, teclas: c.teclas + n }))}
@@ -641,6 +666,8 @@ function VistaPregunta({
   numero,
   slug,
   respuesta,
+  pistasAbiertas,
+  onAbrirPista,
   motor,
   onResponder,
   onTeclas,
@@ -650,6 +677,8 @@ function VistaPregunta({
   numero: number
   slug: string
   respuesta: Respuesta | undefined
+  pistasAbiertas: number
+  onAbrirPista: () => void
   motor: EstadoMotor
   onResponder: (r: Respuesta) => void
   onTeclas: (n: number) => void
@@ -661,6 +690,8 @@ function VistaPregunta({
         pregunta={p}
         numero={numero}
         codigoGuardado={typeof respuesta === 'string' ? respuesta : p.inicial}
+        pistasAbiertas={pistasAbiertas}
+        onAbrirPista={onAbrirPista}
         motor={motor}
         onResponder={onResponder}
         onTeclas={onTeclas}
@@ -732,6 +763,8 @@ function PreguntaDeCodigo({
   pregunta: p,
   numero,
   codigoGuardado,
+  pistasAbiertas,
+  onAbrirPista,
   motor,
   onResponder,
   onTeclas,
@@ -740,6 +773,8 @@ function PreguntaDeCodigo({
   pregunta: Extract<Pregunta, { tipo: 'codigo' }>
   numero: number
   codigoGuardado: string
+  pistasAbiertas: number
+  onAbrirPista: () => void
   motor: EstadoMotor
   onResponder: (r: Respuesta) => void
   onTeclas: (n: number) => void
@@ -773,6 +808,7 @@ function PreguntaDeCodigo({
           Puedes correr tu programa las veces que quieras. Lo que quede escrito en el editor es tu respuesta: se guarda
           solo.
         </p>
+        <Pistas pistas={p.pistas} abiertas={pistasAbiertas} onAbrir={onAbrirPista} />
       </div>
 
       <div className="flex min-h-0 flex-col gap-3">
@@ -857,6 +893,60 @@ function PreguntaDeCodigo({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Las dos pistas de una pregunta de código. Cada una se abre con una pregunta
+ * de "¿seguro?", porque cuesta puntos: la primera 1 y la segunda 2 más.
+ */
+function Pistas({ pistas, abiertas, onAbrir }: { pistas: [string, string]; abiertas: number; onAbrir: () => void }) {
+  const [preguntando, setPreguntando] = useState(false)
+  const siguiente = abiertas + 1
+  const cuesta = siguiente <= 2 ? COSTO_PISTAS[siguiente] - COSTO_PISTAS[abiertas] : 0
+
+  return (
+    <div className="mt-5 space-y-2.5 border-t border-[#1e2b45] pt-4">
+      <p className="etiqueta">💡 Pistas · cuestan puntos</p>
+      {pistas.slice(0, abiertas).map((texto, i) => (
+        <div key={i} className="aparecer rounded-xl border border-[#78350f] bg-[#241a08] p-3">
+          <p className="mb-1 text-[10px] font-bold text-[#fbbf24]">
+            Pista {i + 1} · −{COSTO_PISTAS[i + 1] - COSTO_PISTAS[i]} {i === 0 ? 'punto' : 'puntos'}
+          </p>
+          <p className="text-sm leading-relaxed text-[#fde8c0]">
+            <ConCodigo texto={texto} />
+          </p>
+        </div>
+      ))}
+      {siguiente <= 2 &&
+        (preguntando ? (
+          <div className="rounded-xl border border-[#78350f] p-3">
+            <p className="text-xs leading-relaxed text-[#fde8c0]">
+              ¿Seguro? La pista {siguiente} te quita <b>{cuesta} {cuesta === 1 ? 'punto' : 'puntos'}</b> en esta pregunta
+              {siguiente === 2 ? ' (con las dos, lo máximo que puedes sacar es 2 de 5)' : ' (lo máximo que puedes sacar queda en 4 de 5)'}.
+              No se puede deshacer.
+            </p>
+            <div className="mt-2.5 flex gap-2">
+              <button
+                onClick={() => {
+                  setPreguntando(false)
+                  onAbrir()
+                }}
+                className="boton boton-primario"
+              >
+                Sí, ver la pista
+              </button>
+              <button onClick={() => setPreguntando(false)} className="boton boton-secundario">
+                Mejor no
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setPreguntando(true)} className="boton boton-secundario">
+            Ver la pista {siguiente} (−{cuesta} {cuesta === 1 ? 'punto' : 'puntos'})
+          </button>
+        ))}
     </div>
   )
 }

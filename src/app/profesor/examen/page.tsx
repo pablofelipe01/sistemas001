@@ -13,6 +13,10 @@ const CIERRE = Date.parse(EXAMEN.cierre)
 
 type Notas = Record<string, Puntaje[]>
 
+function totalPistas(p: Presentacion) {
+  return Object.values(p.pistas ?? {}).reduce((s, n) => s + n, 0)
+}
+
 function duracion(ms: number) {
   const m = Math.max(0, Math.round(ms / 60000))
   return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`
@@ -73,7 +77,7 @@ export default function ExamenProfesor() {
     const correr = correrCon('python')
     for (const p of ps) {
       const puntajes: Puntaje[] = []
-      for (const q of PREGUNTAS) puntajes.push(await puntuar(q, p.respuestas[q.id], correr))
+      for (const q of PREGUNTAS) puntajes.push(await puntuar(q, p.respuestas[q.id], correr, p.pistas?.[q.id] ?? 0))
       setNotas((n) => ({ ...n, [p.slug]: puntajes }))
     }
   }
@@ -94,12 +98,12 @@ export default function ExamenProfesor() {
 
   function descargar() {
     if (!lista) return
-    const enc = ['Nombre', 'Estado', 'Inicio', 'Minutos', 'Puntos', `Sobre ${MAXIMO}`, 'Nota (0-5)', 'Salidas', 'Segundos fuera', 'Pegados', 'Capturas', ...PREGUNTAS.map((_, i) => `P${i + 1}`)]
+    const enc = ['Nombre', 'Estado', 'Inicio', 'Minutos', 'Puntos', `Sobre ${MAXIMO}`, 'Nota (0-5)', 'Pistas', 'Salidas', 'Segundos fuera', 'Pegados', 'Capturas', ...PREGUNTAS.map((_, i) => `P${i + 1}`)]
     const filas = lista.map((p) => {
       const ns = notas[p.slug] ?? []
       const total = ns.reduce((s, x) => s + x.puntos, 0)
       const fin = p.fin ? Date.parse(p.fin) : Math.min(ahora, CIERRE)
-      return [p.nombre, estado(p), hora(p.inicio), Math.round((fin - Date.parse(p.inicio)) / 60000), total, MAXIMO, nota(total), p.salidas, p.segundos_fuera, p.pegados, p.capturas, ...ns.map((x) => x.puntos)]
+      return [p.nombre, estado(p), hora(p.inicio), Math.round((fin - Date.parse(p.inicio)) / 60000), total, MAXIMO, nota(total), totalPistas(p), p.salidas, p.segundos_fuera, p.pegados, p.capturas, ...ns.map((x) => x.puntos)]
     })
     const csv = [enc, ...filas].map((f) => f.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const a = document.createElement('a')
@@ -165,7 +169,8 @@ export default function ExamenProfesor() {
       {error && <p className="mb-3 text-sm text-[#fb7185]">{error}</p>}
       <p className="mb-4 text-xs leading-relaxed text-[#7f8fb3]">
         Cada pregunta vale de 0 a {PUNTOS_POR_PREGUNTA}. En las de código, los puntos salen de la parte de las pruebas que
-        pasa; en la selección múltiple, algunas respuestas a medio camino dan algo. La nota es los puntos llevados a la
+        pasa, menos lo que costaron las pistas (la primera 1 punto, la segunda 2 más); en la selección múltiple, algunas
+        respuestas a medio camino dan algo. La nota es los puntos llevados a la
         escala de 0 a 5. <b>Salidas</b> son las veces que se fue de la página del examen (a Teams, a YouTube o a otra
         parte): mírelo junto con el tiempo fuera.
       </p>
@@ -181,6 +186,7 @@ export default function ExamenProfesor() {
               <th className="p-2.5">Contestó</th>
               <th className="p-2.5">Puntos</th>
               <th className="p-2.5">Nota</th>
+              <th className="p-2.5">Pistas</th>
               <th className="p-2.5">Salidas</th>
               <th className="p-2.5">Pegados</th>
               <th className="p-2.5">Capturas</th>
@@ -208,6 +214,7 @@ export default function ExamenProfesor() {
                     </td>
                     <td className="p-2.5">{total === undefined ? '…' : `${total}/${MAXIMO}`}</td>
                     <td className="p-2.5 text-sm font-black text-[#86efac]">{total === undefined ? '…' : nota(total)}</td>
+                    <td className="p-2.5">{totalPistas(p)}</td>
                     <td className={`p-2.5 ${fuera ? 'font-bold text-[#fbbf24]' : ''}`}>
                       {p.salidas} · {duracion(p.segundos_fuera * 1000)}
                     </td>
@@ -216,7 +223,7 @@ export default function ExamenProfesor() {
                   </tr>
                   {abierto === p.slug && (
                     <tr>
-                      <td colSpan={10} className="bg-[#0a1120] p-4">
+                      <td colSpan={11} className="bg-[#0a1120] p-4">
                         <Detalle p={p} puntajes={ns} />
                         <button onClick={() => void reabrir(p)} className="boton boton-secundario mt-4">
                           ♻ Dar otra oportunidad (borra este intento)
@@ -256,6 +263,11 @@ function Detalle({ p, puntajes }: { p: Presentacion; puntajes: Puntaje[] | undef
                 {pts ? `${pts.puntos}/${PUNTOS_POR_PREGUNTA}` : '…'}
               </span>
             </p>
+            {pts?.descuento ? (
+              <p className="mb-1 text-[10px] font-bold text-[#fbbf24]">
+                💡 Abrió {p.pistas?.[q.id]} {p.pistas?.[q.id] === 1 ? 'pista' : 'pistas'}: −{pts.descuento}
+              </p>
+            ) : null}
             <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[11px] text-[#d6e4ff]">{respuesta}</pre>
             {pts?.pruebas && (
               <ul className="mt-1.5 space-y-0.5">

@@ -97,6 +97,7 @@ create table if not exists public.examenes (
   fin             timestamptz,
   terminado_por   text,
   respuestas      jsonb   not null default '{}'::jsonb,
+  pistas          jsonb   not null default '{}'::jsonb,
   salidas         integer not null default 0,
   segundos_fuera  integer not null default 0,
   pegados         integer not null default 0,
