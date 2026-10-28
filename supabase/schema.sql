@@ -86,3 +86,29 @@ alter table public.proyectos enable row level security;
 alter table public.cursos    enable row level security;
 
 -- Sin políticas a propósito: el acceso anónimo queda cerrado por completo.
+
+-- Los exámenes de los cursos (hoy: Python desde cero). Una sola oportunidad:
+-- si el renglón ya tiene fin, la ruta /api/examen no deja volver a empezar.
+create table if not exists public.examenes (
+  slug            text not null,
+  examen          text not null,
+  nombre          text not null,
+  inicio          timestamptz not null default now(),
+  fin             timestamptz,
+  terminado_por   text,
+  respuestas      jsonb   not null default '{}'::jsonb,
+  salidas         integer not null default 0,
+  segundos_fuera  integer not null default 0,
+  pegados         integer not null default 0,
+  capturas        integer not null default 0,
+  teclas          integer not null default 0,
+  actualizado     timestamptz not null default now(),
+  primary key (slug, examen)
+);
+
+comment on table  public.examenes               is 'Un renglón por alumno y examen. Una sola oportunidad: si ya tiene fin, no se puede volver a presentar.';
+comment on column public.examenes.terminado_por is 'alumno (le dio Terminar) | cierre (se acabó la hora). Vacío mientras lo está presentando.';
+comment on column public.examenes.salidas       is 'Cuántas veces salió de la página del examen (otra pestaña u otra ventana).';
+comment on column public.examenes.capturas      is 'Intentos de captura de pantalla que se alcanzaron a ver (Imprimir pantalla, Cmd+Shift, Win+Shift).';
+
+alter table public.examenes enable row level security;

@@ -118,9 +118,14 @@ export default function Profesor() {
         <h1 className="text-2xl font-black">
           Panel del profesor <span className="text-sm font-normal text-[#7f8fb3]">· {datos.alumnos.length} alumnos</span>
         </h1>
-        <button onClick={entrar} className="boton boton-secundario">
-          Actualizar
-        </button>
+        <div className="flex gap-2">
+          <a href="/profesor/examen" className="boton boton-primario">
+            🐍 Examen de Python
+          </a>
+          <button onClick={entrar} className="boton boton-secundario">
+            Actualizar
+          </button>
+        </div>
       </header>
 
       {error && (
