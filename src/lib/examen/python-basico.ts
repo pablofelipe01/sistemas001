@@ -459,11 +459,14 @@ const preguntas: Pregunta[] = [
 ]
 
 export const EXAMEN_PYTHON: Examen = {
-  id: 'python-basico',
+  // Un id por grupo: el del 28 de octubre fue 'python-basico' y sus filas siguen
+  // en Supabase para el informe. Con un id nuevo el otro grupo empieza de cero,
+  // también en los computadores compartidos (la llave del navegador cambia).
+  id: 'python-basico-30oct',
   titulo: 'Examen de Python desde cero',
   emoji: '🐍',
-  // Hoy, 28 de octubre de 2026, a las 6:45 de la tarde en Bogotá (UTC−5).
-  cierre: '2026-10-28T18:45:00-05:00',
+  // Hoy, 30 de octubre de 2026, a las 6:45 de la tarde en Bogotá (UTC−5).
+  cierre: '2026-10-30T18:45:00-05:00',
   cierreTexto: 'hoy a las 6:45 PM (hora de Bogotá)',
   preguntas,
 }
