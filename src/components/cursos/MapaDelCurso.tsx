@@ -45,6 +45,12 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
             ? ' Cada cinco lecciones hay un examen de práctica (opcional) que te dice qué te falta reforzar.'
             : ''}
         </p>
+        {curso.vigilado && (
+          <p className="mt-3 max-w-2xl rounded-lg border border-[#7f1d3a] bg-[#2a0f1c] px-3 py-2 text-xs leading-relaxed text-[#ffd7e2]">
+            📸 Este curso tiene el mismo seguro del examen: si tomas un pantallazo o te sales a otra página, la lección se tapa
+            y le llega al profe. Aquí se aprende escribiendo tú, no preguntándole a una IA.
+          </p>
+        )}
         {nombre ? (
           <p className="mt-3 text-xs text-[#7f8fb3]">
             Trabajando como <span className="text-[#e2e8ff]">{nombre}</span> ·{' '}

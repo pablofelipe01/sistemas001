@@ -47,6 +47,8 @@ const NOMBRE_EVENTO: Record<string, string> = {
   fallo: '✕ falló',
   mision: '🧩 cumplió una misión',
   practica: '📝 hizo un examen de práctica',
+  captura: '📸 intentó un pantallazo',
+  salida: '🚪 salió de la página',
 }
 
 export default function Profesor() {
@@ -236,7 +238,7 @@ export default function Profesor() {
                 <span className="w-32 shrink-0 font-bold text-[#9fb0d4]">{e.slug}</span>
                 <span
                   className={
-                    e.tipo.includes('bloquead')
+                    e.tipo.includes('bloquead') || e.tipo === 'captura' || e.tipo === 'salida'
                       ? 'text-[#fb7185]'
                       : e.tipo === 'resuelto' || e.tipo === 'mision'
                         ? 'text-[#4ade80]'
