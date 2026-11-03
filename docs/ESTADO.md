@@ -71,6 +71,11 @@ por `python-basico`, detrás de la clave, y se baja en PDF con la ventana de imp
 llegan de Supabase. La sección "Para mirar" se detecta sola (pocas contestadas, salidas,
 capturas, presentarlo dos veces, la misma respuesta equivocada en 3 o más del mismo grupo).
 Las filas que no son de alumnos se quitan con ✕ (se recuerda en el navegador).
+Arriba se cambia entre **📊 Del salón** y **🧒 Individuales**: un reporte por alumno, cada uno
+en su hoja (uno o todos de una vez en el mismo PDF), con su nota frente al promedio de su
+grupo, barras por temas, qué le salió bien, qué repasar (la pregunta N se repasa en la
+lección N del curso de preparación) y pregunta por pregunta con lo que le faltó y su código.
+"Incluir salidas y capturas" se puede apagar si el reporte va para la familia.
 
 ## Antes (28 de octubre de 2026): examen de Python
 

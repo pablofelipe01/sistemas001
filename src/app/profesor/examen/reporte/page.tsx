@@ -66,6 +66,10 @@ export default function ReporteExamen() {
   const [cargando, setCargando] = useState(false)
   const [ocultos, setOcultos] = useState<string[]>([])
   const [hoy, setHoy] = useState('')
+  // Del salón (todos juntos) o individual (uno por alumno, cada uno en su hoja).
+  const [vista, setVista] = useState<'salon' | 'alumnos'>('salon')
+  const [elegido, setElegido] = useState('todos')
+  const [conConducta, setConConducta] = useState(true)
 
   // Si viene de /profesor/examen, la clave ya está escrita.
   useEffect(() => {
@@ -204,6 +208,44 @@ export default function ReporteExamen() {
         <Link href="/profesor/examen" className="boton boton-secundario">
           ← Volver al examen
         </Link>
+        <div className="flex overflow-hidden rounded-lg border border-[#c7d0de]">
+          {(
+            [
+              ['salon', '📊 Del salón'],
+              ['alumnos', '🧒 Individuales'],
+            ] as const
+          ).map(([v, t]) => (
+            <button
+              key={v}
+              onClick={() => setVista(v)}
+              className={`px-3 py-2 text-xs font-bold ${vista === v ? 'bg-[#14532d] text-white' : 'bg-white text-[#374151] hover:bg-[#f3f4f6]'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        {vista === 'alumnos' && (
+          <>
+            <select
+              value={elegido}
+              onChange={(e) => setElegido(e.target.value)}
+              className="rounded-lg border border-[#c7d0de] bg-white px-2 py-2 text-xs text-[#1f2937]"
+            >
+              <option value="todos">Todos, uno por hoja ({filas.length})</option>
+              {[...filas]
+                .sort((a, b) => a.p.nombre.localeCompare(b.p.nombre))
+                .map((f) => (
+                  <option key={`${f.p.examen}:${f.p.slug}`} value={`${f.p.examen}:${f.p.slug}`}>
+                    {f.p.nombre} · {f.grupo.replace('Grupo del ', '')}
+                  </option>
+                ))}
+            </select>
+            <label className="flex items-center gap-1.5 text-xs text-[#374151]">
+              <input type="checkbox" checked={conConducta} onChange={(e) => setConConducta(e.target.checked)} />
+              Incluir salidas y capturas
+            </label>
+          </>
+        )}
         <button onClick={() => window.print()} disabled={calificando > 0} className="boton boton-primario disabled:opacity-40">
           ⬇ Descargar PDF
         </button>
@@ -212,7 +254,27 @@ export default function ReporteExamen() {
         {error && <span className="text-xs text-[#be123c]">{error}</span>}
       </div>
 
+      {/* ------------------------------------------------- las individuales */}
+      {vista === 'alumnos' &&
+        [...filas]
+          .sort((a, b) => a.p.nombre.localeCompare(b.p.nombre))
+          .filter((f) => elegido === 'todos' || elegido === `${f.p.examen}:${f.p.slug}`)
+          .map((f, i) => (
+            <ReporteAlumno
+              key={`${f.p.examen}:${f.p.slug}`}
+              f={f}
+              grupo={filas.filter((x) => x.p.examen === f.p.examen)}
+              hoy={hoy}
+              conConducta={conConducta}
+              nuevaHoja={i > 0}
+            />
+          ))}
+      {vista === 'alumnos' && elegido !== 'todos' && !filas.some((f) => `${f.p.examen}:${f.p.slug}` === elegido) && (
+        <p className="text-center text-sm text-[#6b7280]">Escoge un alumno de la lista.</p>
+      )}
+
       {/* ------------------------------------------------------- la hoja */}
+      {vista === 'salon' && (
       <article style={{ fontFamily: 'Arial, Helvetica, sans-serif' }} className="mx-auto max-w-5xl rounded-xl bg-white px-10 py-9 text-[13px] leading-relaxed text-[#1f2937] shadow print:max-w-none print:rounded-none print:p-0 print:text-[10.5px] print:shadow-none">
         <h1 className="text-2xl font-black text-[#14532d]">
           {EXAMEN_PYTHON.emoji} {EXAMEN_PYTHON.titulo} — reporte de resultados
@@ -252,7 +314,7 @@ export default function ReporteExamen() {
         {/* ----------------------------------------------- 2. por alumno */}
         <Titulo n={2}>Notas por alumno</Titulo>
         <p className="mb-2 text-[#6b7280] print:hidden">
-          Puedes quitar del reporte una fila que no sea de un alumno (una prueba tuya, por ejemplo) con ✕. Las filas quitadas
+          Toca un nombre para ver su reporte individual. Puedes quitar del reporte una fila que no sea de un alumno (una prueba tuya, por ejemplo) con ✕. Las filas quitadas
           aparecen abajo, por si quieres devolverlas.
         </p>
         <Tabla
@@ -260,9 +322,18 @@ export default function ReporteExamen() {
           filas={[...filas]
             .sort((a, b) => b.total - a.total)
             .map((f) => [
-              <span key="n" className="whitespace-nowrap font-semibold">
+              <button
+                key="n"
+                onClick={() => {
+                  setElegido(`${f.p.examen}:${f.p.slug}`)
+                  setVista('alumnos')
+                  window.scrollTo(0, 0)
+                }}
+                title="Ver su reporte individual"
+                className="whitespace-nowrap text-left font-semibold hover:text-[#15803d] hover:underline print:no-underline"
+              >
                 {f.p.nombre}
-              </span>,
+              </button>,
               f.grupo.replace('Grupo del ', ''),
               String(f.total),
               <b key="nota" className={f.nota >= 3 ? 'text-[#15803d]' : 'text-[#b91c1c]'}>
@@ -376,6 +447,7 @@ export default function ReporteExamen() {
           lección por cada punto del examen y un examen de práctica cada cinco.
         </p>
       </article>
+      )}
     </div>
   )
 }
@@ -510,4 +582,243 @@ function Tabla({ cabeza, filas }: { cabeza: React.ReactNode[]; filas: React.Reac
       </table>
     </div>
   )
+}
+
+/** Las lecciones del curso de preparación van en el mismo orden del examen: la pregunta N se repasa en la lección N. */
+const CURSO_PREPARACION = '/cursos/preparacion-python'
+
+const BLOQUES = [
+  'print, texto y cuentas',
+  'variables, input, f-string e if',
+  'if, for y range',
+  'for, while y listas',
+  'listas y funciones',
+  'sangría y funciones',
+]
+
+function minutos(desde: string, hasta: string) {
+  return Math.max(0, Math.round((Date.parse(hasta) - Date.parse(desde)) / 60000))
+}
+
+/**
+ * El reporte de un solo alumno, en su propia hoja: su nota frente al
+ * promedio de su grupo, por temas, qué le salió bien, qué repasar (con la
+ * lección del curso de preparación) y pregunta por pregunta, con lo que le
+ * faltó. Escrito para que se lo puedan leer a él o a su familia.
+ */
+function ReporteAlumno({
+  f,
+  grupo,
+  hoy,
+  conConducta,
+  nuevaHoja,
+}: {
+  f: Fila
+  grupo: Fila[]
+  hoy: string
+  conConducta: boolean
+  nuevaHoja: boolean
+}) {
+  const promGrupo = promedio(grupo.map((x) => x.nota))
+  const aprobo = f.nota >= 3
+  const bien = PREGUNTAS.map((q, i) => ({ q, i })).filter(({ i }) => f.puntajes[i].puntos === PUNTOS_POR_PREGUNTA)
+  const repasar = PREGUNTAS.map((q, i) => ({ q, i })).filter(
+    ({ q, i }) => f.puntajes[i].puntos <= 3 && contestada(q, f.p.respuestas[q.id]),
+  )
+  const enBlanco = PREGUNTAS.map((q, i) => ({ q, i })).filter(({ q }) => !contestada(q, f.p.respuestas[q.id]))
+  const fin = f.p.fin ?? f.p.actualizado
+  const fecha = new Date(f.p.inicio).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Bogota' })
+
+  return (
+    <article
+      style={{ fontFamily: 'Arial, Helvetica, sans-serif', breakBefore: nuevaHoja ? 'page' : undefined }}
+      className="mx-auto mb-6 max-w-4xl rounded-xl bg-white px-10 py-9 text-[13px] leading-relaxed text-[#1f2937] shadow print:mb-0 print:max-w-none print:rounded-none print:p-0 print:text-[10.5px] print:shadow-none"
+    >
+      <p className="text-[11px] font-bold uppercase tracking-wider text-[#15803d]">
+        {EXAMEN_PYTHON.emoji} {EXAMEN_PYTHON.titulo} · reporte individual
+      </p>
+      <h1 className="mt-1 text-2xl font-black text-[#111827]">{f.p.nombre}</h1>
+      <p className="text-[#4b5563]">
+        {f.grupo} · presentado el {fecha} · reporte hecho el {hoy}
+      </p>
+
+      {/* -------------------------------------------------------- la nota */}
+      <div className="mt-5 flex flex-wrap items-stretch gap-4">
+        <div className={`rounded-xl border-2 px-6 py-4 text-center ${aprobo ? 'border-[#86efac] bg-[#f0fdf4]' : 'border-[#fecaca] bg-[#fef2f2]'}`}>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#6b7280]">Nota</p>
+          <p className={`text-4xl font-black ${aprobo ? 'text-[#15803d]' : 'text-[#b91c1c]'}`}>{uno(f.nota)}</p>
+          <p className="text-[11px] text-[#6b7280]">de 5 · {aprobo ? 'aprobó' : 'todavía no aprueba (se aprueba con 3.0)'}</p>
+        </div>
+        <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1 self-center sm:grid-cols-3">
+          <Dato t="Puntos" v={`${f.total} de ${MAXIMO}`} />
+          <Dato t="Promedio de su grupo" v={`${uno(promGrupo)} de 5`} />
+          <Dato t="Preguntas contestadas" v={`${f.contesto} de ${PREGUNTAS.length}`} />
+          <Dato t="Escribir código" v={`${f.codigo} de ${MAX_CODIGO} (${pct(f.codigo, MAX_CODIGO)})`} />
+          <Dato t="Leer código" v={`${f.leer} de ${MAX_LEER} (${pct(f.leer, MAX_LEER)})`} />
+          <Dato t="Pistas abiertas" v={String(f.pistas)} />
+          <Dato t="Tiempo" v={`${minutos(f.p.inicio, fin)} min`} />
+          <Dato t="Le dio Terminar" v={f.p.terminado_por === 'alumno' ? 'Sí' : 'No (se cerró a la hora)'} />
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------ por temas */}
+      <Titulo n={1}>Por temas</Titulo>
+      <div className="space-y-1.5">
+        {BLOQUES.map((tema, b) => {
+          const mio = f.puntajes.slice(b * 5, b * 5 + 5).reduce((s, x) => s + x.puntos, 0)
+          const suyo = Math.round((mio / 25) * 100)
+          const delGrupo = Math.round(
+            (promedio(grupo.map((x) => x.puntajes.slice(b * 5, b * 5 + 5).reduce((s, y) => s + y.puntos, 0))) / 25) * 100,
+          )
+          return (
+            <div key={b} className="flex items-center gap-3">
+              <span className="w-56 shrink-0 text-[12px] print:w-44 print:text-[10px]">
+                <b>{b * 5 + 1}–{b * 5 + 5}</b> · {tema}
+              </span>
+              <div className="relative h-3.5 flex-1 overflow-hidden rounded bg-[#f3f4f6] print:[print-color-adjust:exact]">
+                <div
+                  className={`h-full ${suyo >= 60 ? 'bg-[#4ade80]' : suyo >= 30 ? 'bg-[#fbbf24]' : 'bg-[#f87171]'} print:[print-color-adjust:exact]`}
+                  style={{ width: `${suyo}%` }}
+                />
+                <div className="absolute top-0 h-full w-0.5 bg-[#1f2937]" style={{ left: `${delGrupo}%` }} title="Promedio del grupo" />
+              </div>
+              <span className="w-32 shrink-0 whitespace-nowrap text-right text-[12px] print:w-28 print:text-[10px]">
+                <b>{suyo} %</b> <span className="text-[#9ca3af]">(grupo {delGrupo} %)</span>
+              </span>
+            </div>
+          )
+        })}
+        <p className="text-[11px] text-[#6b7280]">La rayita negra es el promedio de su grupo.</p>
+      </div>
+
+      {/* -------------------------------------------- bien y por repasar */}
+      <div className="mt-2 grid gap-5 sm:grid-cols-2 print:grid-cols-2">
+        <div>
+          <Titulo n={2}>Lo que le salió muy bien</Titulo>
+          {bien.length ? (
+            <ul className="list-disc space-y-0.5 pl-5">
+              {bien.map(({ q, i }) => (
+                <li key={q.id}>
+                  {i + 1}. {q.titulo}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[#6b7280]">Ninguna pregunta completa todavía. ¡La próxima!</p>
+          )}
+        </div>
+        <div>
+          <Titulo n={3}>Lo que tiene que repasar</Titulo>
+          {repasar.length || enBlanco.length ? (
+            <>
+              {repasar.length > 0 && (
+                <ul className="list-disc space-y-0.5 pl-5">
+                  {repasar.map(({ q, i }) => (
+                    <li key={q.id}>
+                      {i + 1}. {q.titulo} → <b>lección {i + 1}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {enBlanco.length > 0 && (
+                <p className="mt-1.5">
+                  <b>No las contestó:</b> {rangos(enBlanco.map(({ i }) => i + 1))} → las mismas lecciones.
+                </p>
+              )}
+              <p className="mt-2 text-[11px] text-[#4b5563]">
+                Cada pregunta tiene su lección con el mismo número en el curso <b>Preparación para el examen de Python</b> (
+                <Code>{CURSO_PREPARACION}</Code>).
+              </p>
+            </>
+          ) : (
+            <p className="text-[#6b7280]">¡Nada! Todo le salió bien o casi bien.</p>
+          )}
+        </div>
+      </div>
+
+      {/* --------------------------------------------- pregunta por pregunta */}
+      <Titulo n={4}>Pregunta por pregunta</Titulo>
+      <Tabla
+        cabeza={['#', 'Pregunta', 'Tipo', 'Puntos', 'Qué pasó']}
+        filas={PREGUNTAS.map((q, i) => {
+          const pz = f.puntajes[i]
+          const r = f.p.respuestas[q.id]
+          let detalle: React.ReactNode
+          if (!contestada(q, r)) detalle = <span className="text-[#9ca3af]">No la contestó.</span>
+          else if (pz.puntos === PUNTOS_POR_PREGUNTA) detalle = <span className="text-[#15803d]">¡Perfecta!</span>
+          else if (q.tipo === 'opcion') {
+            const buena = q.opciones.find((o) => o.puntos === PUNTOS_POR_PREGUNTA)?.texto
+            detalle = (
+              <>
+                Escogió <b>{q.opciones[r as number]?.texto}</b>; la respuesta era <b>{buena}</b>.
+              </>
+            )
+          } else if (q.tipo === 'vf') {
+            detalle = (
+              <>
+                Dijo <b>{r ? 'Verdadero' : 'Falso'}</b>; era <b>{q.verdadero ? 'Verdadero' : 'Falso'}</b>.
+              </>
+            )
+          } else {
+            const fallas = (pz.pruebas ?? []).filter((x) => !x.ok).map((x) => x.msg)
+            detalle = (
+              <>
+                {fallas.length > 0 && <span>Le faltó: {fallas.join(' · ')}.</span>}
+                {pz.descuento ? <span className="text-[#b45309]"> Las pistas le costaron {pz.descuento}.</span> : null}
+                <pre className="mt-1 max-h-40 overflow-hidden whitespace-pre-wrap rounded bg-[#f3f4f6] px-2 py-1 font-mono text-[10.5px] print:max-h-none print:text-[8.5px]">
+                  {String(r)}
+                </pre>
+              </>
+            )
+          }
+          return [
+            String(i + 1),
+            q.titulo,
+            { codigo: 'código', opcion: 'selección', vf: 'V/F' }[q.tipo],
+            <b
+              key="p"
+              className={pz.puntos === PUNTOS_POR_PREGUNTA ? 'text-[#15803d]' : pz.puntos > 0 ? 'text-[#b45309]' : 'text-[#b91c1c]'}
+            >
+              {pz.puntos}/{PUNTOS_POR_PREGUNTA}
+            </b>,
+            detalle,
+          ]
+        })}
+      />
+
+      {conConducta && (
+        <>
+          <Titulo n={5}>Durante el examen</Titulo>
+          <p>
+            Salió de la página del examen <b>{f.p.salidas}</b> {f.p.salidas === 1 ? 'vez' : 'veces'} (
+            {Math.round(f.p.segundos_fuera / 60)} min fuera en total) · intentos de captura de pantalla: <b>{f.p.capturas}</b> ·
+            intentos de pegar código: <b>{f.p.pegados}</b>.
+          </p>
+          <p className="mt-1 text-[11px] text-[#6b7280]">
+            Una salida es irse a otra pestaña o aplicación; una captura es oprimir Imprimir pantalla o Cmd/Win + Shift.
+          </p>
+        </>
+      )}
+    </article>
+  )
+}
+
+function Dato({ t, v }: { t: string; v: string }) {
+  return (
+    <p className="text-[12px] print:text-[10px]">
+      <span className="text-[#6b7280]">{t}:</span> <b>{v}</b>
+    </p>
+  )
+}
+
+/** [1, 2, 3, 5, 7, 8] → "1 a 3, 5, 7 y 8". */
+function rangos(ns: number[]) {
+  const partes: string[] = []
+  for (let i = 0; i < ns.length; ) {
+    let j = i
+    while (j + 1 < ns.length && ns[j + 1] === ns[j] + 1) j++
+    partes.push(j - i >= 2 ? `${ns[i]} a ${ns[j]}` : j > i ? `${ns[i]}, ${ns[j]}` : `${ns[i]}`)
+    i = j + 1
+  }
+  return partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}` : partes[0]
 }
