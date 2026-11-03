@@ -434,7 +434,7 @@ export default function ExamenPython() {
               <b>🏁 Cuando acabes, dale Terminar.</b> Después de eso ya no puedes volver a ninguna pregunta.
             </li>
             <li>
-              <b>🕡 Si se acaba la clase y no has terminado, el examen se cierra solo {EXAMEN.cierreTexto}</b>, y se
+              <b>🕡 El examen se cierra solo para todos {EXAMEN.cierreTexto}</b>, y si no has terminado se
               entrega con lo que lleves.
             </li>
             <li>
