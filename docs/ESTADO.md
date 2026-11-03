@@ -56,6 +56,14 @@ El reporte con nombres NO está en el repo (es público): vive en
 pliega y despliega con un clic en su título (`src/components/Plegable.tsx`; se acuerda en
 el navegador), con "Plegar todas / Desplegar todas" arriba.
 
+**Reporte del examen en el portal** (`/profesor/examen/reporte`, botón "📄 Reporte para
+descargar" en `/profesor/examen`): se arma en el momento con todos los grupos cuyo id empieza
+por `python-basico`, detrás de la clave, y se baja en PDF con la ventana de imprimir (es la
+única página que se deja imprimir: agrega `se-imprime` al body). En el código no hay nombres:
+llegan de Supabase. La sección "Para mirar" se detecta sola (pocas contestadas, salidas,
+capturas, presentarlo dos veces, la misma respuesta equivocada en 3 o más del mismo grupo).
+Las filas que no son de alumnos se quitan con ✕ (se recuerda en el navegador).
+
 ## Antes (28 de octubre de 2026): examen de Python
 
 `/examen-python`: 30 preguntas sobre Python desde cero (17 de código, 7 de selección

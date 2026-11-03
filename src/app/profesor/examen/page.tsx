@@ -157,6 +157,19 @@ export default function ExamenProfesor() {
             <span className={cargando ? 'inline-block animate-spin' : 'inline-block'}>↻</span>
             {cargando ? 'Actualizando…' : 'Actualizar'}
           </button>
+          <button
+            onClick={() => {
+              try {
+                sessionStorage.setItem('profesor:clave-reporte', clave)
+              } catch {
+                /* sin almacenamiento: allá se escribe otra vez */
+              }
+              window.location.href = '/profesor/examen/reporte'
+            }}
+            className="boton boton-secundario"
+          >
+            📄 Reporte para descargar
+          </button>
           <button onClick={descargar} disabled={calificados < lista.length} className="boton boton-primario disabled:opacity-40">
             ⬇ Descargar CSV
           </button>
