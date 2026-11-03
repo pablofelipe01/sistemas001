@@ -459,14 +459,17 @@ const preguntas: Pregunta[] = [
 ]
 
 export const EXAMEN_PYTHON: Examen = {
-  // Un id por grupo: el del 28 de octubre fue 'python-basico' y sus filas siguen
-  // en Supabase para el informe. Con un id nuevo el otro grupo empieza de cero,
-  // también en los computadores compartidos (la llave del navegador cambia).
-  id: 'python-basico-30oct',
+  // Un id por vuelta: el 28 de octubre fue 'python-basico' y el 30,
+  // 'python-basico-30oct'; sus filas siguen en Supabase para el reporte. Este es
+  // el segundo intento, después del curso de preparación: con un id nuevo todos
+  // empiezan de cero, también en los computadores compartidos (la llave del
+  // navegador cambia), y el reporte lo muestra como un grupo más para comparar.
+  id: 'python-basico-repaso',
   titulo: 'Examen de Python desde cero',
   emoji: '🐍',
-  // Hoy, 30 de octubre de 2026, a las 6:45 de la tarde en Bogotá (UTC−5).
-  cierre: '2026-10-30T18:45:00-05:00',
-  cierreTexto: 'hoy a las 6:45 PM (hora de Bogotá)',
+  // Abierto desde el 3 de noviembre de 2026, sin fecha fija: se cierra solo a
+  // los 30 días, el jueves 3 de diciembre a las 6:45 de la tarde (UTC−5).
+  cierre: '2026-12-03T18:45:00-05:00',
+  cierreTexto: 'el jueves 3 de diciembre a las 6:45 PM (hora de Bogotá)',
   preguntas,
 }

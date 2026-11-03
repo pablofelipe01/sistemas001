@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 3 de noviembre de 2026 (curso de preparación para el examen de Python)
+Última actualización: 3 de noviembre de 2026 (segundo intento del examen de Python)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -23,6 +23,17 @@ Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el 
 en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
+
+## Segundo intento del examen de Python (3 de noviembre de 2026)
+
+El examen quedó limpio para volver a presentarlo después del curso de preparación, sin
+borrar nada: el id pasó a `python-basico-repaso` (antes `python-basico` el 28 y
+`python-basico-30oct` el 30; esas filas siguen en Supabase). Todos empiezan de cero, también
+en los computadores compartidos. Las 30 preguntas son las mismas. Está abierto sin fecha
+fija: se cierra solo el jueves 3 de diciembre de 2026 a las 6:45 PM. El reporte
+(`/profesor/examen/reporte`) lo muestra como un grupo más, y "Lo presentaron más de una vez"
+queda como el antes y el después de cada niño. Ojo: con 30 días abierto, quien empieza en
+clase podría seguir en la casa; las salidas y el tiempo quedan en el panel.
 
 ## Lo último que se hizo (3 de noviembre de 2026): preparación para el examen de Python
 
