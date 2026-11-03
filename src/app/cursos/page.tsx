@@ -55,7 +55,7 @@ export default function Cursos() {
           Un lenguaje <span className="text-[#4ade80]">nuevo</span>, paso a paso
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#9fb0d4]">
-          Ya sabes HTML, CSS y JavaScript. Aquí aprendes otro lenguaje desde cero: una explicación corta, cinco retos, y
+          Ya sabes HTML, CSS y JavaScript. Aquí aprendes otro lenguaje desde cero: una explicación corta, unos retos, y
           a la siguiente lección. Todo se escribe con tus dedos.
         </p>
       </header>

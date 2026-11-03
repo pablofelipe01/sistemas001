@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 28 de octubre de 2026 (examen de Python)
+Última actualización: 3 de noviembre de 2026 (curso de preparación para el examen de Python)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -15,7 +15,8 @@ Una app de Next.js para el salón, con cuatro partes:
 2. **Los proyectos guiados** (`/proyecto`): 8 proyectos que el alumno vuelve a
    escribir con sus dedos y después modifica con misiones.
 3. **Los cursos** (`/cursos`): Python desde cero, Python avanzado, TypeScript, TypeScript
-   avanzado, Rust desde cero y Rust avanzado (10 lecciones × 5 retos cada uno).
+   avanzado, Rust desde cero y Rust avanzado (10 lecciones × 5 retos cada uno), y la
+   Preparación para el examen de Python (30 lecciones × 3 retos y 6 exámenes de práctica).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
@@ -23,7 +24,39 @@ en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
 
-## Lo último que se hizo (28 de octubre de 2026): examen de Python
+## Lo último que se hizo (3 de noviembre de 2026): preparación para el examen de Python
+
+A los dos grupos les fue mal en el examen de Python (promedios de 2.2 y 1.6 sobre 5; leen
+código bastante mejor de lo que lo escriben, y while, listas y funciones casi no aparecieron).
+El reporte con nombres NO está en el repo (es público): vive en
+`~/Documents/Informes de alumnos/examen-python-resultados/`.
+
+**`/cursos/preparacion-python`**, "Preparación para el examen de Python", como el preicfes:
+
+- **Una lección por cada punto del examen, en el mismo orden** (30 lecciones, `pre-N`), con
+  3 retos cada una (`pre-N-M`): "inténtalo tú", un paso más y "como en el examen". Cada
+  explicación termina con un bloque nuevo, `{ t: 'examen' }` ("🎯 Prepárate: la pregunta N
+  del examen será sobre…"). El `ojo` de cada lección sale de los errores reales del examen.
+- **Exámenes de práctica** (`Curso.practicas`, opcionales): después de las lecciones 5, 10,
+  15, 20, 25 y 30 se ofrece "¿Quieres un pequeño examen de práctica?" con 5 preguntas del
+  mismo tipo que las del examen (código con pistas que cuestan, selección, V/F), pero con
+  otros datos. Se califican con `src/lib/examen/puntuar.ts` y dicen "Te falta fortalecer… →
+  volvamos a la lección N" (cada pregunta sabe su `leccion`; se manda a repasar con menos
+  de 4 de 5). Viven en `/cursos/preparacion-python/practica-N` (la misma ruta de las
+  lecciones). El resultado se guarda en el navegador (el mejor) y al profe le llega un
+  evento `practica` con la nota y las lecciones a repasar.
+- **El examen no se tocó.** Solo se movió su vista de preguntas a
+  `src/components/examen/VistaPregunta.tsx` para que la usen también las prácticas.
+- Contenido en `src/lib/cursos/preparacion/parte1..4.ts` (puntos 1-5, 6-15, 16-25,
+  26-30). Cada solución se probó con el Python del computador: pasa sus pruebas, el código
+  vacío no, y las prácticas dan 5 con la respuesta buena.
+
+**Panel del profesor**: Actualizar muestra "Actualizando…" con el ↻ girando (también en
+`/profesor/examen`), y cada sección (examen web, cada curso, proyectos, movimientos) se
+pliega y despliega con un clic en su título (`src/components/Plegable.tsx`; se acuerda en
+el navegador), con "Plegar todas / Desplegar todas" arriba.
+
+## Antes (28 de octubre de 2026): examen de Python
 
 `/examen-python`: 30 preguntas sobre Python desde cero (17 de código, 7 de selección
 múltiple, 6 de falso o verdadero), una sola oportunidad, cierre automático el 28-oct-2026

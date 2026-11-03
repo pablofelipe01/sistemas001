@@ -5,6 +5,7 @@ import { ALL_CHALLENGES, SECCIONES, TOTAL } from '@/lib/challenges'
 import type { Progreso } from '@/lib/progress'
 import { PROYECTOS, proyectoPorId } from '@/lib/proyectos'
 import { TablaCursosProfesor, nombreDeReto, type FilaCurso } from '@/components/cursos/TablaCursosProfesor'
+import { Plegable, plegarTodas } from '@/components/Plegable'
 
 interface FilaAlumno {
   slug: string
@@ -45,6 +46,7 @@ const NOMBRE_EVENTO: Record<string, string> = {
   resuelto: '✅ resolvió',
   fallo: '✕ falló',
   mision: '🧩 cumplió una misión',
+  practica: '📝 hizo un examen de práctica',
 }
 
 export default function Profesor() {
@@ -122,20 +124,33 @@ export default function Profesor() {
           <a href="/profesor/examen" className="boton boton-primario">
             🐍 Examen de Python
           </a>
-          <button onClick={entrar} className="boton boton-secundario">
-            Actualizar
+          <button onClick={entrar} disabled={cargando} className="boton boton-secundario inline-flex items-center gap-2 disabled:opacity-70">
+            <span className={cargando ? 'inline-block animate-spin' : 'inline-block'}>↻</span>
+            {cargando ? 'Actualizando…' : 'Actualizar'}
           </button>
         </div>
       </header>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-[11px] text-[#5a6b8f]">
+        <span>Secciones:</span>
+        <button onClick={() => plegarTodas(false)} className="hover:text-[#9fb0d4] hover:underline">
+          ▸ Plegar todas
+        </button>
+        <button onClick={() => plegarTodas(true)} className="hover:text-[#9fb0d4] hover:underline">
+          ▾ Desplegar todas
+        </button>
+        {cargando && <span className="animate-pulse text-[#fbbf24]">Trayendo los datos más nuevos…</span>}
+      </div>
 
       {error && (
         <p className="mb-5 rounded-lg border border-[#78350f] bg-[#241a08] px-4 py-3 text-sm text-[#fde8c0]">{error}</p>
       )}
 
+      <Plegable id="examen-web" titulo="🌐 Examen de HTML, CSS y JavaScript" resumen={`· ${datos.alumnos.length} alumnos`}>
       {datos.alumnos.length === 0 ? (
-        <p className="panel p-6 text-sm text-[#7f8fb3]">Todavía no ha entrado nadie.</p>
+        <p className="text-sm text-[#7f8fb3]">Todavía no ha entrado nadie.</p>
       ) : (
-        <div className="panel mb-8 overflow-x-auto">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[#1e2b45] text-[10px] uppercase tracking-wider text-[#5a6b8f]">
               <tr>
@@ -204,13 +219,13 @@ export default function Profesor() {
           </table>
         </div>
       )}
+      </Plegable>
 
       <TablaCursosProfesor filas={datos.cursos ?? []} />
 
       <TablaProyectos avances={datos.proyectos ?? []} />
 
-      <section className="panel p-5">
-        <h2 className="mb-3 text-sm font-bold">Últimos movimientos</h2>
+      <Plegable id="movimientos" titulo="Últimos movimientos" resumen={`· ${datos.eventos.length}`}>
         {datos.eventos.length === 0 ? (
           <p className="text-xs text-[#5a6b8f]">Nada todavía.</p>
         ) : (
@@ -240,7 +255,7 @@ export default function Profesor() {
             ))}
           </ul>
         )}
-      </section>
+      </Plegable>
     </main>
   )
 }
@@ -303,10 +318,7 @@ function TablaProyectos({ avances }: { avances: AvanceProyecto[] }) {
   const filas = [...porAlumno.entries()].sort((a, b) => cumplidas(b[1]) - cumplidas(a[1]))
 
   return (
-    <section className="panel mb-8 p-5">
-      <h2 className="mb-1 text-sm font-bold">
-        Proyectos guiados <span className="font-normal text-[#7f8fb3]">· {filas.length} alumnos</span>
-      </h2>
+    <Plegable id="proyectos" titulo="Proyectos guiados" resumen={`· ${filas.length} alumnos`}>
       <p className="mb-4 text-[11px] text-[#5a6b8f]">
         Misiones cumplidas en cada proyecto. Pasa el mouse por encima para ver teclas escritas y pegados bloqueados.
       </p>
@@ -374,6 +386,6 @@ function TablaProyectos({ avances }: { avances: AvanceProyecto[] }) {
           </p>
         </div>
       )}
-    </section>
+    </Plegable>
   )
 }

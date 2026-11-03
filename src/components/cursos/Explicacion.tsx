@@ -98,6 +98,16 @@ export function Explicacion({
             </div>
           )
         }
+        if (b.t === 'examen') {
+          return (
+            <div key={i} className="rounded-xl border border-[#155e75] bg-[#082030] p-3">
+              <p className="etiqueta mb-1 text-[#22d3ee]">🎯 Prepárate</p>
+              <p className="text-[13px] leading-relaxed text-[#cffafe]">
+                <ConCodigo texto={b.texto} />
+              </p>
+            </div>
+          )
+        }
         if (b.t === 'compara') {
           return (
             <div key={i} className="grid gap-2">

@@ -1,20 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { CursoCerrado } from './CursoCerrado'
 import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
-import { leccionAbierta, leccionActual, minutosDelCurso, retosHechos, totalRetos } from '@/lib/cursos'
+import { cargarPracticas, leccionAbierta, leccionActual, minutosDelCurso, retosHechos, totalRetos } from '@/lib/cursos'
 import { motorDe } from '@/lib/cursos/motor'
-import type { Curso } from '@/lib/cursos/tipos'
+import type { Curso, IntentoPractica } from '@/lib/cursos/tipos'
 
 /** La lista de lecciones del curso: cuáles van hechas, cuál sigue y cuáles están cerradas. */
 export function MapaDelCurso({ curso }: { curso: Curso }) {
-  const { nombre, avance, cargado } = useAvanceCurso(curso.id)
+  const { nombre, slug, avance, cargado } = useAvanceCurso(curso.id)
+  const [practicas, setPracticas] = useState<Record<string, IntentoPractica>>({})
   const { previo, listo, abierto } = useCursoPrevio(curso)
   const actual = leccionActual(curso, avance)
   const total = totalRetos(curso)
   const horas = Math.round(minutosDelCurso(curso) / 60)
+
+  useEffect(() => {
+    if (cargado) setPracticas(cargarPracticas(curso.id, slug))
+  }, [cargado, curso.id, slug])
 
   // El motor pesa: se empieza a cargar desde aquí, mientras el alumno escoge lección.
   useEffect(() => {
@@ -34,8 +39,11 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#9fb0d4]">{curso.descripcion}</p>
         <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[#7f8fb3]">
-          Cada lección empieza con una explicación corta y sigue con cinco retos. Escribes el código, lo corres, ves lo
+          Cada lección empieza con una explicación corta y sigue con unos retos. Escribes el código, lo corres, ves lo
           que sale y cuando estés listo lo compruebas. Igual que en el examen: aquí no se copia ni se pega.
+          {curso.practicas?.length
+            ? ' Cada cinco lecciones hay un examen de práctica (opcional) que te dice qué te falta reforzar.'
+            : ''}
         </p>
         {nombre ? (
           <p className="mt-3 text-xs text-[#7f8fb3]">
@@ -96,8 +104,10 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
               {terminada && <span className="hidden text-xs text-[#4ade80] sm:block">✓</span>}
             </div>
           )
+          const practica = curso.practicas?.find((p) => p.despuesDe === l.numero)
           return (
-            <li key={l.id}>
+            <Fragment key={l.id}>
+            <li>
               {abierta ? (
                 <Link
                   href={`/cursos/${curso.id}/${l.id}`}
@@ -113,6 +123,16 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
                 </div>
               )}
             </li>
+            {practica && (
+              <FilaDePractica
+                href={`/cursos/${curso.id}/${practica.id}`}
+                titulo={practica.titulo}
+                preguntas={practica.preguntas.length}
+                abierta={cargado && terminada}
+                intento={practicas[practica.id]}
+              />
+            )}
+            </Fragment>
           )
         })}
       </ol>
@@ -126,5 +146,50 @@ export function MapaDelCurso({ curso }: { curso: Curso }) {
         </Link>
       </footer>
     </main>
+  )
+}
+
+/** Un examen de práctica en el mapa: se abre al terminar la lección de antes y muestra el mejor resultado. */
+function FilaDePractica({
+  href,
+  titulo,
+  preguntas,
+  abierta,
+  intento,
+}: {
+  href: string
+  titulo: string
+  preguntas: number
+  abierta: boolean
+  intento: IntentoPractica | undefined
+}) {
+  const puntos = intento?.puntos.reduce((s, n) => s + n, 0)
+  const maximo = preguntas * 5
+  const contenido = (
+    <div className="flex items-center gap-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#082030] text-lg">{abierta ? '📝' : '🔒'}</span>
+      <div className="min-w-0 flex-1">
+        <p className="etiqueta text-[#22d3ee]">Examen de práctica · opcional · {preguntas} preguntas</p>
+        <h2 className="truncate text-sm font-bold text-[#cffafe]">{titulo}</h2>
+      </div>
+      {puntos !== undefined && (
+        <span className={`text-xs font-bold ${puntos >= maximo * 0.8 ? 'text-[#4ade80]' : 'text-[#fbbf24]'}`}>
+          Mejor: {((puntos / maximo) * 5).toFixed(1)} de 5
+        </span>
+      )}
+    </div>
+  )
+  return (
+    <li className="pl-6">
+      {abierta ? (
+        <Link href={href} className="panel block border-dashed border-[#155e75] p-3 transition hover:bg-[#0b1c2a]">
+          {contenido}
+        </Link>
+      ) : (
+        <div className="panel border-dashed p-3 opacity-50" title="Se abre al terminar la lección de arriba">
+          {contenido}
+        </div>
+      )}
+    </li>
   )
 }

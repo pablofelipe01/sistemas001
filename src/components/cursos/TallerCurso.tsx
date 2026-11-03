@@ -8,11 +8,11 @@ import { Confeti } from '@/components/Confeti'
 import { ConCodigo, Explicacion } from './Explicacion'
 import { CursoCerrado } from './CursoCerrado'
 import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
-import { cursoSiguiente, leccionAbierta, retosHechos, totalRetos } from '@/lib/cursos'
+import { cursoSiguiente, leccionAbierta, practicaDespuesDe, retosHechos, totalRetos } from '@/lib/cursos'
 import { calificar, type Calificacion, type Resultado } from '@/lib/cursos/calificar'
 import { explicarError } from '@/lib/cursos/errores'
 import { correrCon, motorDe, nombreDelLenguaje, type EstadoMotor } from '@/lib/cursos/motor'
-import type { Curso, Leccion, Lenguaje } from '@/lib/cursos/tipos'
+import type { Curso, Leccion, Lenguaje, Practica } from '@/lib/cursos/tipos'
 import { registrarEvento } from '@/lib/storage'
 
 const BURLAS_AL_PEGAR = [
@@ -125,7 +125,10 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
       setFiesta(true)
       setTimeout(() => setFiesta(false), 2600)
       const ultimo = hechos + (resuelto ? 0 : 1) === leccion.retos.length
-      avisar(ultimo ? '¡Lección terminada! Cinco de cinco.' : '¡Reto cumplido! Vamos con el siguiente.', 'bien')
+      avisar(
+        ultimo ? `¡Lección terminada! ${leccion.retos.length} de ${leccion.retos.length}.` : '¡Reto cumplido! Vamos con el siguiente.',
+        'bien',
+      )
     } else {
       setTemblando(true)
       setTimeout(() => setTemblando(false), 450)
@@ -195,7 +198,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
       <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 text-center">
         <p className="mb-3 text-4xl">🔒</p>
         <h1 className="mb-2 text-xl font-black">Esta lección todavía está cerrada</h1>
-        <p className="mb-6 text-sm text-[#9fb0d4]">Se abre cuando termines los cinco retos de la lección anterior.</p>
+        <p className="mb-6 text-sm text-[#9fb0d4]">Se abre cuando termines todos los retos de la lección anterior.</p>
         <Link href={`/cursos/${curso.id}`} className="boton boton-primario">
           ← Ver las lecciones
         </Link>
@@ -320,6 +323,7 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
                 {leccionTerminada && (
                   <FinDeLeccion
                     curso={curso}
+                    practica={practicaDespuesDe(curso, leccion)}
                     siguiente={siguienteLeccion}
                     cursoTerminado={cursoTerminado}
                     teclas={avance.teclas}
@@ -557,18 +561,56 @@ function Salida({
   )
 }
 
+/**
+ * Curso de preparación: al terminar ciertas lecciones se ofrece un examen de
+ * práctica. Es opcional: también se puede seguir de largo.
+ */
+function OfertaDePractica({ curso, practica, siguiente }: { curso: Curso; practica: Practica; siguiente: Leccion | undefined }) {
+  const desde = practica.preguntas[0]?.leccion
+  const hasta = practica.preguntas[practica.preguntas.length - 1]?.leccion
+  return (
+    <div className="aparecer mt-6 rounded-xl border border-[#155e75] bg-[#082030] p-5">
+      <p className="text-sm font-black text-[#cffafe]">📝 ¿Quieres un pequeño examen de práctica?</p>
+      <p className="mt-1 text-xs leading-relaxed text-[#a5d8e6]">
+        Ya repasaste los puntos {desde} a {hasta}. Son {practica.preguntas.length} preguntas como las del examen de verdad.
+        No cuentan para la nota: al final te digo qué te falta reforzar y a qué lección volver.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Link href={`/cursos/${curso.id}/${practica.id}`} className="boton boton-primario latir inline-block">
+          ¡Sí, quiero la práctica!
+        </Link>
+        {siguiente && (
+          <Link href={`/cursos/${curso.id}/${siguiente.id}`} className="boton boton-secundario inline-block">
+            Ahora no, sigo con la lección {siguiente.numero}
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function FinDeLeccion({
   curso,
+  practica,
   siguiente,
   cursoTerminado,
   teclas,
 }: {
   curso: Curso
+  practica: Practica | undefined
   siguiente: Leccion | undefined
   cursoTerminado: boolean
   teclas: number
 }) {
   const siguienteCurso = cursoSiguiente(curso)
+  if (practica) {
+    return (
+      <>
+        <OfertaDePractica curso={curso} practica={practica} siguiente={cursoTerminado ? undefined : siguiente} />
+        {cursoTerminado && <FinDeLeccion curso={curso} practica={undefined} siguiente={siguiente} cursoTerminado teclas={teclas} />}
+      </>
+    )
+  }
   if (cursoTerminado) {
     return (
       <div className="aparecer mt-6 rounded-xl border border-[#166534] bg-[#0d2418] p-5 text-center">

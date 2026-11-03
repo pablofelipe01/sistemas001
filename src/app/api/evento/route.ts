@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-const TIPOS = new Set(['pegado-bloqueado', 'copia-bloqueada', 'ayuda', 'salto', 'resuelto', 'fallo', 'mision'])
+const TIPOS = new Set(['pegado-bloqueado', 'copia-bloqueada', 'ayuda', 'salto', 'resuelto', 'fallo', 'mision', 'practica'])
 
 /**
  * Registra un hecho suelto que al profesor le sirve ver: un intento de pegar,

@@ -1,12 +1,13 @@
 import { CURSO_PYTHON } from './python'
+import { CURSO_PREPARACION_PYTHON } from './preparacion-python'
 import { CURSO_PYTHON_AVANZADO } from './python-avanzado'
 import { CURSO_RUST } from './rust'
 import { CURSO_RUST_AVANZADO } from './rust-avanzado'
 import { CURSO_TYPESCRIPT } from './typescript'
 import { CURSO_TYPESCRIPT_AVANZADO } from './typescript-avanzado'
-import { avanceVacio, type AvanceCurso, type Curso, type Leccion } from './tipos'
+import { avanceVacio, type AvanceCurso, type Curso, type IntentoPractica, type Leccion } from './tipos'
 
-export const CURSOS: Curso[] = [CURSO_PYTHON, CURSO_PYTHON_AVANZADO, CURSO_TYPESCRIPT, CURSO_TYPESCRIPT_AVANZADO, CURSO_RUST, CURSO_RUST_AVANZADO]
+export const CURSOS: Curso[] = [CURSO_PYTHON, CURSO_PREPARACION_PYTHON, CURSO_PYTHON_AVANZADO, CURSO_TYPESCRIPT, CURSO_TYPESCRIPT_AVANZADO, CURSO_RUST, CURSO_RUST_AVANZADO]
 
 export function cursoPorId(id: string) {
   return CURSOS.find((c) => c.id === id)
@@ -14,6 +15,41 @@ export function cursoPorId(id: string) {
 
 export function leccionPorId(curso: Curso, id: string) {
   return curso.lecciones.find((l) => l.id === id)
+}
+
+export function practicaPorId(curso: Curso, id: string) {
+  return curso.practicas?.find((p) => p.id === id)
+}
+
+/** El examen de práctica que se ofrece al terminar esta lección, si hay. */
+export function practicaDespuesDe(curso: Curso, leccion: Leccion) {
+  return curso.practicas?.find((p) => p.despuesDe === leccion.numero)
+}
+
+/* Los intentos de práctica viven en el navegador; al profe le llega un evento con el resultado. */
+function llaveDePracticas(idCurso: string, slug: string) {
+  return `examen-web:practicas:${idCurso}:${slug || 'invitado'}`
+}
+
+export function cargarPracticas(idCurso: string, slug: string): Record<string, IntentoPractica> {
+  try {
+    return JSON.parse(localStorage.getItem(llaveDePracticas(idCurso, slug)) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+export function guardarPractica(idCurso: string, slug: string, idPractica: string, intento: IntentoPractica) {
+  try {
+    const todas = cargarPracticas(idCurso, slug)
+    const antes = todas[idPractica]
+    const suma = (i?: IntentoPractica) => i?.puntos.reduce((s, n) => s + n, 0) ?? -1
+    // Se guarda el último, pero si el anterior fue mejor se queda el mejor.
+    todas[idPractica] = suma(intento) >= suma(antes) ? intento : antes!
+    localStorage.setItem(llaveDePracticas(idCurso, slug), JSON.stringify(todas))
+  } catch {
+    /* sin almacenamiento: el resultado se ve, solo que no se recuerda */
+  }
 }
 
 export function totalRetos(curso: Curso) {

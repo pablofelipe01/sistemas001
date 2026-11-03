@@ -6,6 +6,8 @@
  * propósito: así la llave de respuestas se puede probar también desde Node.
  */
 
+import type { Pregunta } from '../examen/tipos'
+
 /** Un pedazo de la explicación de una lección. Los textos aceptan `código` entre comillas invertidas. */
 export type Bloque =
   | { t: 'p'; texto: string }
@@ -15,6 +17,8 @@ export type Bloque =
   | { t: 'compara'; js: string; py: string }
   /** Un ojo con esto: el error típico de la lección. */
   | { t: 'ojo'; texto: string }
+  /** Curso de preparación: "Prepárate, la pregunta N del examen será sobre esto". */
+  | { t: 'examen'; texto: string }
 
 /**
  * Una prueba del reto. Todas las que miran la salida comparan "suave": sin
@@ -87,6 +91,31 @@ export interface Curso {
   /** Lo que se le dice al alumno al terminar todo el curso. */
   despedida?: string
   lecciones: Leccion[]
+  /**
+   * Exámenes de práctica: se ofrecen al terminar la lección `despuesDe` y no
+   * cierran nada (son opcionales). Los usa el curso de preparación.
+   */
+  practicas?: Practica[]
+}
+
+/** Una pregunta de práctica, igual a las del examen, que sabe a qué lección mandar al alumno si le va mal. */
+export type PreguntaPractica = Pregunta & { leccion: number }
+
+export interface Practica {
+  /** 'practica-1': también es su dirección, /cursos/<curso>/practica-1. */
+  id: string
+  numero: number
+  /** El número de la lección después de la cual se ofrece. */
+  despuesDe: number
+  titulo: string
+  preguntas: PreguntaPractica[]
+}
+
+/** Cómo le fue en un examen de práctica, guardado en el navegador. */
+export interface IntentoPractica {
+  /** Los puntos de cada pregunta, en orden. */
+  puntos: number[]
+  fecha: string
 }
 
 /** Lo que se guarda de cada alumno en un curso, en el navegador y en la nube. */
