@@ -90,6 +90,11 @@ export interface Curso {
   requiere?: string
   /** Lo que se le dice al alumno al terminar todo el curso. */
   despedida?: string
+  /**
+   * Con el seguro del examen: se tapa con los pantallazos y al salir de la
+   * página, marca de agua con el nombre, y cada intento le llega al profe.
+   */
+  vigilado?: boolean
   lecciones: Leccion[]
   /**
    * Exámenes de práctica: se ofrecen al terminar la lección `despuesDe` y no

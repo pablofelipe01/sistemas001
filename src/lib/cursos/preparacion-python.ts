@@ -21,6 +21,8 @@ export const CURSO_PREPARACION_PYTHON: Curso = {
   descripcion:
     'Repasamos el examen de Python punto por punto, en el mismo orden: qué es cada cosa, para qué sirve, ejemplos, y a practicar. Cada cinco puntos hay un pequeño examen de práctica que te dice qué te falta reforzar.',
   lenguaje: 'python',
+  // Parte del problema fue el pantallazo pegado en una IA: aquí, como en el examen, no se puede.
+  vigilado: true,
   despedida: 'Repasaste los 30 puntos del examen. Ya sabes de qué se trata cada pregunta: ¡a por ese cinco!',
   lecciones: [...LECCIONES_1, ...LECCIONES_2, ...LECCIONES_3, ...LECCIONES_4],
   practicas: [...PRACTICAS_1, ...PRACTICAS_2, ...PRACTICAS_3, ...PRACTICAS_4],

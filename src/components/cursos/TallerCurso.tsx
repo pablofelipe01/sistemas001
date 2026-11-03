@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Terminal, type TerminalHandle } from '@/components/Terminal'
 import { Aviso, type TonoAviso } from '@/components/Aviso'
 import { Confeti } from '@/components/Confeti'
+import { Cortina, MarcaDeAgua, useVigilancia } from '@/components/Vigilancia'
 import { ConCodigo, Explicacion } from './Explicacion'
 import { CursoCerrado } from './CursoCerrado'
 import { useAvanceCurso, useCursoPrevio } from './useAvanceCurso'
@@ -65,6 +66,18 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
   const abierta = !cargado || leccionAbierta(curso, indiceLeccion, avance)
 
   const avisar = useCallback((texto: string, tono: TonoAviso = 'info') => setAviso({ texto, tono }), [])
+
+  // El seguro del examen, en los cursos que lo piden (el de preparación).
+  const { tapado } = useVigilancia({
+    activo: Boolean(curso.vigilado) && cargado,
+    onCaptura: () => {
+      if (slug) registrarEvento(slug, 'captura', reto.id, `${curso.titulo} · lección ${leccion.numero}`)
+    },
+    onSalida: (segundos) => {
+      if (slug && segundos >= 3) registrarEvento(slug, 'salida', reto.id, `${segundos} s fuera · lección ${leccion.numero}`)
+    },
+    avisar: (texto) => avisar(texto, 'alerta'),
+  })
   const motorDelCurso = motorDe(curso.lenguaje)
 
   /* ------------------------------------------------------------- arranque */
@@ -212,6 +225,8 @@ export function TallerCurso({ curso, leccion }: { curso: Curso; leccion: Leccion
   return (
     <div className="flex min-h-screen flex-col lg:h-screen lg:overflow-hidden">
       <Confeti activo={fiesta} />
+      {curso.vigilado && <MarcaDeAgua nombre={nombre} />}
+      <Cortina visible={tapado} />
       <Aviso mensaje={aviso?.texto ?? null} tono={aviso?.tono} onCerrar={() => setAviso(null)} />
 
       {/* ------------------------------------------------------ barra de arriba */}

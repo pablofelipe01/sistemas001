@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Aviso } from '@/components/Aviso'
 import { Confeti } from '@/components/Confeti'
 import { VistaPregunta } from '@/components/examen/VistaPregunta'
+import { Cortina, MarcaDeAgua, useVigilancia } from '@/components/Vigilancia'
 import { useAvanceCurso } from './useAvanceCurso'
 import { guardarPractica, retosHechos } from '@/lib/cursos'
 import { correrCon, motorDe, type EstadoMotor } from '@/lib/cursos/motor'
@@ -25,7 +26,7 @@ type Fase = 'portada' | 'preguntas' | 'calificando' | 'resultado'
  * repetir las veces que quiera; el profe ve el resultado en los movimientos.
  */
 export function PracticaCurso({ curso, practica }: { curso: Curso; practica: Practica }) {
-  const { slug, avance, cargado } = useAvanceCurso(curso.id)
+  const { nombre, slug, avance, cargado } = useAvanceCurso(curso.id)
   const [fase, setFase] = useState<Fase>('portada')
   const [actual, setActual] = useState(0)
   const [respuestas, setRespuestas] = useState<Record<string, Respuesta>>({})
@@ -50,6 +51,18 @@ export function PracticaCurso({ curso, practica }: { curso: Curso; practica: Pra
     void python.arrancar().catch(() => {})
   }, [python])
 
+  // Igual que en el examen: pantallazos y salidas tapan la práctica y se cuentan.
+  const [vigilado, setVigilado] = useState({ capturas: 0, salidas: 0 })
+  const { tapado } = useVigilancia({
+    activo: fase === 'preguntas',
+    onCaptura: () => {
+      setVigilado((v) => ({ ...v, capturas: v.capturas + 1 }))
+      if (slug) registrarEvento(slug, 'captura', practica.id, `${curso.titulo} · ${practica.titulo}`)
+    },
+    onSalida: () => setVigilado((v) => ({ ...v, salidas: v.salidas + 1 })),
+    avisar: (texto) => setAviso(texto),
+  })
+
   const responder = useCallback((id: string, r: Respuesta) => setRespuestas((rs) => ({ ...rs, [id]: r })), [])
 
   async function terminar() {
@@ -70,7 +83,8 @@ export function PracticaCurso({ curso, practica }: { curso: Curso; practica: Pra
         slug,
         'practica',
         practica.id,
-        `${practica.titulo}: ${nota(total, preguntas.length)} de 5${repasar.length ? ` · repasar ${repasar.join(', ')}` : ' · todo bien'}`,
+        `${practica.titulo}: ${nota(total, preguntas.length)} de 5${repasar.length ? ` · repasar ${repasar.join(', ')}` : ' · todo bien'}` +
+          (vigilado.capturas || vigilado.salidas ? ` · ${vigilado.capturas} pantallazos, ${vigilado.salidas} salidas` : ''),
       )
     }
   }
@@ -81,6 +95,7 @@ export function PracticaCurso({ curso, practica }: { curso: Curso; practica: Pra
     setPuntajes([])
     setActual(0)
     setRonda((r) => r + 1)
+    setVigilado({ capturas: 0, salidas: 0 })
     setFase('preguntas')
   }
 
@@ -125,6 +140,10 @@ export function PracticaCurso({ curso, practica }: { curso: Curso; practica: Pra
               • <b className="text-[#e2e8ff]">No cuenta para la nota</b>. Al final te digo cómo te fue y qué lección repasar.
             </li>
             <li>• La puedes repetir las veces que quieras.</li>
+            <li>
+              • <b className="text-[#ffd7e2]">📸 Igual que en el examen: nada de pantallazos ni de salirte de la página.</b> Se tapa y
+              le llega al profe.
+            </li>
           </ul>
           <div className="mt-6 flex flex-wrap gap-3">
             <button onClick={() => setFase('preguntas')} className="boton boton-primario">
@@ -161,7 +180,9 @@ export function PracticaCurso({ curso, practica }: { curso: Curso; practica: Pra
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="no-copiar flex min-h-screen flex-col">
+      <MarcaDeAgua nombre={nombre} />
+      <Cortina visible={tapado} />
       <Aviso mensaje={aviso} tono="alerta" onCerrar={() => setAviso(null)} />
       <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-[#1e2b45] bg-[#0b1222] px-4 py-2.5">
         <div className="min-w-0">
