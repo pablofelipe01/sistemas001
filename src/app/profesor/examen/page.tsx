@@ -153,8 +153,9 @@ export default function ExamenProfesor() {
           <span className="text-sm font-normal text-[#7f8fb3]">· {lista.length} alumnos · cierra {EXAMEN.cierreTexto}</span>
         </h1>
         <div className="flex gap-2">
-          <button onClick={entrar} className="boton boton-secundario">
-            ↻ Actualizar
+          <button onClick={entrar} disabled={cargando} className="boton boton-secundario inline-flex items-center gap-2 disabled:opacity-70">
+            <span className={cargando ? 'inline-block animate-spin' : 'inline-block'}>↻</span>
+            {cargando ? 'Actualizando…' : 'Actualizar'}
           </button>
           <button onClick={descargar} disabled={calificados < lista.length} className="boton boton-primario disabled:opacity-40">
             ⬇ Descargar CSV

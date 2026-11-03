@@ -3,6 +3,7 @@
 import { Fragment, useState } from 'react'
 import { CURSOS, retosHechos, totalRetos } from '@/lib/cursos'
 import type { Curso } from '@/lib/cursos/tipos'
+import { Plegable } from '@/components/Plegable'
 
 export interface FilaCurso {
   slug: string
@@ -28,6 +29,8 @@ export function nombreDeReto(id: string) {
       if (i !== -1) return `${c.emoji} L${l.numero}·R${i + 1} ${l.retos[i].titulo}`
       if (l.id === id) return `${c.emoji} Lección ${l.numero}`
     }
+    const p = c.practicas?.find((x) => x.id === id)
+    if (p) return `${c.emoji} Práctica ${p.numero}`
   }
   return null
 }
@@ -67,12 +70,9 @@ function TablaDeUnCurso({ curso, filas }: { curso: Curso; filas: FilaCurso[] }) 
   const dificiles = [...fallos.entries()].filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3)
 
   return (
-    <section className="panel mb-8 p-5">
-      <h2 className="mb-1 text-sm font-bold">
-        {curso.emoji} Curso: {curso.titulo} <span className="font-normal text-[#7f8fb3]">· {filas.length} alumnos</span>
-      </h2>
+    <Plegable id={`curso-${curso.id}`} titulo={`${curso.emoji} Curso: ${curso.titulo}`} resumen={`· ${filas.length} alumnos`}>
       <p className="mb-4 text-[11px] text-[#5a6b8f]">
-        Retos resueltos en cada lección (de 5). Toca un alumno para ver reto por reto y el código del reto donde va.
+        Retos resueltos en cada lección. Toca un alumno para ver reto por reto y el código del reto donde va.
       </p>
 
       {dificiles.length > 0 && (
@@ -187,7 +187,7 @@ function TablaDeUnCurso({ curso, filas }: { curso: Curso; filas: FilaCurso[] }) 
           </p>
         </div>
       )}
-    </section>
+    </Plegable>
   )
 }
 
