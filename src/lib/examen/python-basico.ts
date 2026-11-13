@@ -464,7 +464,9 @@ export const EXAMEN_PYTHON: Examen = {
   // el segundo intento, después del curso de preparación: con un id nuevo todos
   // empiezan de cero, también en los computadores compartidos (la llave del
   // navegador cambia), y el reporte lo muestra como un grupo más para comparar.
-  id: 'python-basico-repaso',
+  // El 13 de noviembre se volvió a dejar en cero con otro id nuevo; las filas de
+  // 'python-basico-repaso' (3 alumnos) siguen en Supabase, sin borrar.
+  id: 'python-basico-13nov',
   titulo: 'Examen de Python desde cero',
   emoji: '🐍',
   // Abierto desde el 3 de noviembre de 2026, sin fecha fija: se cierra solo a
