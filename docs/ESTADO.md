@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 13 de noviembre de 2026 (examen de Python otra vez en cero)
+Última actualización: 17 de noviembre de 2026 (examen de Python otra vez en cero)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -23,6 +23,12 @@ Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el 
 en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
+
+## Examen de Python otra vez en cero (17 de noviembre de 2026)
+
+Se volvió a dejar en cero para que todos lo presenten de nuevo, sin borrar nada: el id pasó
+de `python-basico-13nov` a `python-basico-17nov`. Las 2 filas de `python-basico-13nov` siguen
+en Supabase. Mismas 30 preguntas y el mismo cierre: jueves 3 de diciembre de 2026 a las 6:45 PM.
 
 ## Examen de Python otra vez en cero (13 de noviembre de 2026)
 
