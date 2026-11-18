@@ -468,7 +468,9 @@ export const EXAMEN_PYTHON: Examen = {
   // 'python-basico-repaso' (3 alumnos) siguen en Supabase, sin borrar.
   // El 17 de noviembre, otra vez en cero; las 2 filas de 'python-basico-13nov'
   // también siguen en Supabase, sin borrar.
-  id: 'python-basico-17nov',
+  // El 18 de noviembre, otra vez en cero para que todos lo presenten ese día;
+  // las 8 filas de 'python-basico-17nov' siguen en Supabase, sin borrar.
+  id: 'python-basico-18nov',
   titulo: 'Examen de Python desde cero',
   emoji: '🐍',
   // Abierto desde el 3 de noviembre de 2026, sin fecha fija: se cierra solo a
