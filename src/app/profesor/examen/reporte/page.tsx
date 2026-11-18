@@ -45,6 +45,21 @@ const uno = (n: number) => n.toFixed(1)
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)} %` : '—')
 const promedio = (xs: number[]) => (xs.length ? xs.reduce((s, n) => s + n, 0) / xs.length : 0)
 
+/** El día (en Bogotá) en que presentó, como 2026-11-17: sirve para filtrar por fecha. */
+function diaDe(iso: string) {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+}
+
+function fechaLarga(dia: string) {
+  return new Date(`${dia}T12:00:00-05:00`).toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  })
+}
+
 function fechaGrupo(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', timeZone: 'America/Bogota' })
 }
@@ -70,6 +85,8 @@ export default function ReporteExamen() {
   const [vista, setVista] = useState<'salon' | 'alumnos'>('salon')
   const [elegido, setElegido] = useState('todos')
   const [conConducta, setConConducta] = useState(true)
+  // 'todas' o un día (2026-11-17): el reporte y el PDF salen solo con ese día.
+  const [fecha, setFecha] = useState('todas')
 
   // Si viene de /profesor/examen, la clave ya está escrita.
   useEffect(() => {
@@ -163,7 +180,20 @@ export default function ReporteExamen() {
     })
   }, [crudas, notas, grupos])
 
-  const filas = todas.filter((f) => !ocultos.includes(`${f.p.examen}:${f.p.slug}`))
+  // Los días en que alguien presentó, del más reciente al más viejo, con cuántos.
+  const dias = useMemo(() => {
+    const cuantos = new Map<string, number>()
+    for (const f of todas) {
+      if (ocultos.includes(`${f.p.examen}:${f.p.slug}`)) continue
+      const d = diaDe(f.p.inicio)
+      cuantos.set(d, (cuantos.get(d) ?? 0) + 1)
+    }
+    return [...cuantos.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+  }, [todas, ocultos])
+
+  const filas = todas.filter(
+    (f) => !ocultos.includes(`${f.p.examen}:${f.p.slug}`) && (fecha === 'todas' || diaDe(f.p.inicio) === fecha),
+  )
   const calificando = crudas ? crudas.length - todas.length : 0
 
   if (!crudas) {
@@ -189,7 +219,10 @@ export default function ReporteExamen() {
     )
   }
 
-  const porGrupo = grupos.map((g) => ({ ...g, filas: filas.filter((f) => f.p.examen === g.id) }))
+  // Con una fecha escogida, solo quedan los grupos que tienen alguien ese día.
+  const porGrupo = grupos
+    .map((g) => ({ ...g, filas: filas.filter((f) => f.p.examen === g.id) }))
+    .filter((g) => fecha === 'todas' || g.filas.length > 0)
 
   return (
     <div className="reporte min-h-screen bg-[#e9edf3] py-6 print:bg-white print:py-0">
@@ -224,6 +257,24 @@ export default function ReporteExamen() {
             </button>
           ))}
         </div>
+        <label className="flex items-center gap-1.5 text-xs font-bold text-[#374151]">
+          📅 Fecha
+          <select
+            value={fecha}
+            onChange={(e) => {
+              setFecha(e.target.value)
+              setElegido('todos')
+            }}
+            className="rounded-lg border border-[#c7d0de] bg-white px-2 py-2 text-xs font-normal text-[#1f2937]"
+          >
+            <option value="todas">Todas las fechas</option>
+            {dias.map(([d, n]) => (
+              <option key={d} value={d}>
+                {fechaLarga(d)} ({n})
+              </option>
+            ))}
+          </select>
+        </label>
         {vista === 'alumnos' && (
           <>
             <select
@@ -280,7 +331,8 @@ export default function ReporteExamen() {
           {EXAMEN_PYTHON.emoji} {EXAMEN_PYTHON.titulo} — reporte de resultados
         </h1>
         <p className="mt-1 text-[#4b5563]">
-          {grupos.map((g) => g.nombre).join(' y ')} · {filas.length} presentaciones · hecho el {hoy}
+          {fecha === 'todas' ? porGrupo.map((g) => g.nombre).join(' y ') : `Solo lo presentado el ${fechaLarga(fecha)}`} · {filas.length}{' '}
+          presentaciones · hecho el {hoy}
         </p>
         <ul className="mt-3 list-disc space-y-0.5 pl-5 text-[#4b5563]">
           <li>
