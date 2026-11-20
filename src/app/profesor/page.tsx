@@ -6,6 +6,7 @@ import type { Progreso } from '@/lib/progress'
 import { PROYECTOS, proyectoPorId } from '@/lib/proyectos'
 import { TablaCursosProfesor, nombreDeReto, type FilaCurso } from '@/components/cursos/TablaCursosProfesor'
 import { Plegable, plegarTodas } from '@/components/Plegable'
+import { TablaArenaProfesor, type FilaArena } from '@/components/arena/TablaArenaProfesor'
 
 interface FilaAlumno {
   slug: string
@@ -49,6 +50,8 @@ const NOMBRE_EVENTO: Record<string, string> = {
   practica: '📝 hizo un examen de práctica',
   captura: '📸 intentó un pantallazo',
   salida: '🚪 salió de la página',
+  parte: '🕹️ pasó una parte de la arena',
+  publicado: '🚀 publicó un juego en la galería',
 }
 
 export default function Profesor() {
@@ -58,6 +61,7 @@ export default function Profesor() {
     eventos: Evento[]
     proyectos?: AvanceProyecto[]
     cursos?: FilaCurso[]
+    arena?: FilaArena[]
     nube: boolean
   } | null>(null)
   const [error, setError] = useState('')
@@ -239,6 +243,8 @@ export default function Profesor() {
       <TablaCursosProfesor filas={datos.cursos ?? []} />
 
       <TablaProyectos avances={datos.proyectos ?? []} />
+
+      <TablaArenaProfesor filas={datos.arena ?? []} clave={clave} />
 
       <Plegable id="movimientos" titulo="Últimos movimientos" resumen={`· ${datos.eventos.length}`}>
         {datos.eventos.length === 0 ? (

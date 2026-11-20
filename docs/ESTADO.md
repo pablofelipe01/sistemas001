@@ -1,6 +1,6 @@
 # Dónde vamos
 
-Última actualización: 18 de noviembre de 2026 (examen de Python otra vez en cero)
+Última actualización: 20 de noviembre de 2026 (la arena de juegos)
 
 Este archivo es la memoria del proyecto entre sesiones: qué hay hecho, qué quedó a
 medias y qué conviene revisar antes de ponerle esto a un niño enfrente.
@@ -18,11 +18,52 @@ Una app de Next.js para el salón, con cuatro partes:
    avanzado, Rust desde cero y Rust avanzado (10 lecciones × 5 retos cada uno), y la
    Preparación para el examen de Python (30 lecciones × 3 retos y 6 exámenes de práctica).
 4. **Los juegos** (`/juegos`): cinco juegos de recreo para repasar sin darse cuenta.
+5. **La arena de juegos** (`/arena`): cada alumno arma un juego de verdad, parte por parte,
+   con JavaScript y un `<canvas>`, lo juega y lo publica en la galería del salón.
 
 Y el **panel del profesor** (`/profesor`), que muestra cómo va el salón en el examen,
 en los cursos y en los proyectos.
 
 La regla de fondo, en todo: **se escribe, no se pega.**
+
+## La arena de juegos (20 de noviembre de 2026)
+
+Actividad recreativa. Tres juegos guiados, originales, por partes, y un modo libre:
+
+| Juego | Ruta | Partes | Qué se aprende |
+|---|---|---|---|
+| 🍎 Atrapa la fruta | `/arena/fruta` | 7 | lienzo, fillRect/arc, objetos, el bucle con requestAnimationFrame, teclado, límites, choque simple, vidas |
+| ☄️ Lluvia de meteoritos | `/arena/meteoritos` | 7 | arreglos, `for…of`, `push`/`filter`, choque de círculos (`Math.hypot`), tiempo y dificultad, récord, reiniciar |
+| 🏓 Ping pong para dos | `/arena/pingpong` | 6 | velocidad en x/y, rebotes, choque pelota-rectángulo, marcador, ganador, revancha (W/S contra flechas) |
+| ✨ Modo libre | `/arena/libre` | — | la base de todo juego + la caja de herramientas; puede traer uno de sus juegos para cambiarlo |
+
+- **Cada parte** (`src/lib/arena.ts`): explicación corta, el código COMPLETO del juego hasta
+  esa parte con las líneas nuevas en verde (`lineasNuevas`, una comparación línea por línea),
+  "🎮 Así queda" para jugar el modelo, y una idea de "🎨 Hazlo tuyo" al pasarla. Se escribe en
+  la terminal de siempre (no se pega).
+- **▶ Jugar** corre el juego en `public/arena.html`, un iframe con `sandbox="allow-scripts"`
+  (origen opaco) que nace de nuevo en cada corrida. Errores traducidos a pistas
+  (`explicarError` en `src/lib/arena-runner.ts`).
+- **✔ Comprobar** corre el juego escondido con un reloj de mentira: avanza cuadros, oprime
+  teclas y mira las variables (`canasta.x`, `puntos`…). Pasos: `cuadros`, `tecla`, `soltar`,
+  `ejecutar`, `ver`. Por eso las pruebas usan los nombres del modelo.
+- **Ciclos infinitos:** antes de correr, `protegerCiclos` le mete `__vuelta(línea)` a cada
+  `while`/`for`/`do` (con el analizador de CodeMirror, sin cambiar números de línea); si un
+  ciclo da 5 millones de vueltas de un tirón, se corta con un error claro. Hace falta porque
+  un iframe trabado deja trabado su proceso y el SIGUIENTE juego no arrancaba. El latido
+  (`SIN_LATIDO`) queda de respaldo.
+- **La galería** (`/arena/galeria`): al publicar se guarda una copia aparte
+  (`codigo_publicado`), así lo que el alumno siga cambiando no rompe lo que juegan los demás.
+  Los guiados se publican solo con todas las partes; antes de publicar se corre 3 segundos y
+  si se rompe no se deja. Es pública: solo sale el nombre corto ("Emily O."). Cuenta jugadas.
+- **Tabla nueva `arena`** en Supabase (ya creada en `fxsimxiazztmuroivqei` y en
+  `supabase/schema.sql`), un renglón por alumno y juego. Rutas: `/api/arena/avance`,
+  `/api/arena/publicar`, `/api/arena/galeria`, `/api/profesor/arena` (ocultar/mostrar).
+  Eventos nuevos: `parte` y `publicado`.
+- **Panel del profesor:** sección "🕹️ Arena de juegos" con partes por alumno y juego, teclas,
+  pegados, y la lista de lo publicado con "🙈 Sacar de la galería" (no borra nada).
+- **Autodiagnóstico:** `/verificar-arena` comprueba que cada modelo pase su parte y que el
+  de la parte anterior NO la pase (si la pasara, la revisión no mide lo nuevo). Hoy: 20/20.
 
 ## Examen de Python otra vez en cero (18 de noviembre de 2026)
 
@@ -470,6 +511,9 @@ contra una compu perfecta un niño solo empata, y eso no divierte a nadie.
 src/lib/challenges/     Los 75 retos del examen (html.ts, css.ts, js.ts)
 src/lib/proyectos.ts    Los 8 proyectos guiados con sus misiones
 src/lib/juegos.ts       Preguntas, parejas y códigos de carga de los juegos
+src/lib/arena.ts        La arena de juegos: los 3 juegos por partes, sus pruebas, la caja de herramientas
+src/lib/arena-runner.ts La pantalla del juego, la revisión con reloj de mentira y el guardia de ciclos
+public/arena.html       El lienzo aislado donde corre el juego del alumno
 src/lib/cursos/         Los cursos: python.ts, python-avanzado.ts y typescript.ts (contenido), calificar.ts, errores*.ts, motor.ts
 public/python/          El worker de Pyodide y corredor.py, que ejecuta el código del alumno
 public/typescript/      El worker del compilador de TypeScript y corredor.js, que revisa los tipos y corre el código

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>arena</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #070b16; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas {
+    display: block;
+    background: #0b1224;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 3 / 2;
+    image-rendering: pixelated;
+    outline: none;
+  }
+  #tapa {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(7, 11, 22, .72); color: #e2e8ff; font: 600 15px system-ui, sans-serif; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<canvas id="lienzo" width="600" height="400" tabindex="0"></canvas>
+<div id="tapa">🖱️ Haz clic aquí para jugar</div>
+<script>
+/*
+ * La arena: el lienzo donde vive el juego del alumno.
+ *
+ * Va en un iframe con sandbox="allow-scripts" y sin allow-same-origin: origen
+ * opaco, no ve cookies, ni localStorage, ni la app que lo contiene. Así se puede
+ * correr sin miedo el juego de un compañero desde la galería.
+ *
+ * Cada corrida es un iframe nuevo (lo decide el que lo contiene): es la forma
+ * más limpia de que no queden ciclos ni teclas de la corrida anterior, y la
+ * única de detener un ciclo infinito.
+ *
+ * Dos oficios:
+ *   1. JUGAR — el juego corre de verdad, con requestAnimationFrame y teclado.
+ *   2. REVISAR — nada pasa solo: el revisor avanza los cuadros uno por uno,
+ *      oprime teclas y mira las variables del juego. Siempre da lo mismo.
+ */
+(function () {
+  'use strict'
+
+  var nativo = {
+    setTimeout: window.setTimeout.bind(window),
+    setInterval: window.setInterval.bind(window),
+    raf: window.requestAnimationFrame.bind(window),
+    random: Math.random
+  }
+
+  function enviar(datos) { parent.postMessage(datos, '*') }
+
+  /* --------------------------------------------------------------- consola */
+
+  var LOGS = 0
+  function mostrar(v) {
+    if (typeof v === 'string') return v
+    if (v === undefined) return 'undefined'
+    try { return JSON.stringify(v) } catch (e) { return String(v) }
+  }
+  console.log = console.info = console.warn = console.error = function () {
+    if (++LOGS > 300) return
+    var p = []
+    for (var i = 0; i < arguments.length; i++) p.push(mostrar(arguments[i]))
+    enviar({ __ar: 'log', texto: p.join(' ') })
+  }
+
+  /* ---------------------------------------------------------------- errores */
+
+  var CORRIDA = null
+  var errorYaContado = false
+
+  function reportarError(mensaje, linea) {
+    if (errorYaContado) return
+    errorYaContado = true
+    enviar({ __ar: 'error', id: CORRIDA && CORRIDA.id, mensaje: String(mensaje), linea: linea || 0 })
+  }
+
+  window.addEventListener('error', function (ev) {
+    reportarError(ev.error && ev.error.message ? ev.error.name + ': ' + ev.error.message : ev.message, ev.lineno)
+  })
+
+  /*
+   * El guardia de los ciclos. La app le mete __vuelta(línea) a cada while y for
+   * del alumno. Cuenta las vueltas de un mismo tirón (el contador se borra
+   * apenas el navegador respira, con una microtarea) y si pasan de unos
+   * millones, el ciclo no va a terminar: se corta con un error en vez de
+   * trabar la pantalla.
+   */
+  var vueltas = 0
+  var borrarVueltas = false
+  window.__vuelta = function (linea) {
+    if (!borrarVueltas) {
+      borrarVueltas = true
+      Promise.resolve().then(function () { vueltas = 0; borrarVueltas = false })
+    }
+    if (++vueltas > 5000000) {
+      vueltas = 0
+      var e = new Error('CICLO_INFINITO:' + linea)
+      reportarError(e.message, linea)
+      throw e
+    }
+  }
+
+  /* Las flechas y la barra espaciadora son del juego, no de la página. */
+  var TECLAS_DEL_JUEGO = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, ' ': 1 }
+  window.addEventListener('keydown', function (ev) {
+    if (TECLAS_DEL_JUEGO[ev.key]) ev.preventDefault()
+  }, true)
+
+  /* El latido: si deja de llegar, el juego se quedó en un ciclo infinito. */
+  nativo.setInterval(function () { enviar({ __ar: 'latido' }) }, 400)
+
+  /* Para que el teclado llegue, el iframe necesita el foco. */
+  var tapa = document.getElementById('tapa')
+  var lienzo = document.getElementById('lienzo')
+  window.addEventListener('blur', function () { if (CORRIDA && CORRIDA.modo === 'jugar') tapa.style.display = 'flex' })
+  window.addEventListener('focus', function () { tapa.style.display = 'none' })
+  tapa.addEventListener('click', function () { tapa.style.display = 'none'; lienzo.focus() })
+
+  /* ---------------------------------------------------- el reloj de revisión */
+
+  var RELOJ = { ahora: 0, cuadros: [], timers: [], sig: 1 }
+
+  function relojDeMentira() {
+    window.requestAnimationFrame = function (fn) {
+      var id = RELOJ.sig++
+      RELOJ.cuadros.push({ id: id, fn: fn })
+      return id
+    }
+    window.cancelAnimationFrame = function (id) {
+      RELOJ.cuadros = RELOJ.cuadros.filter(function (c) { return c.id !== id })
+    }
+    function programar(fn, ms, cada, args) {
+      if (typeof fn !== 'function') return 0
+      var id = RELOJ.sig++
+      ms = Math.max(0, Number(ms) || 0)
+      RELOJ.timers.push({ id: id, cuando: RELOJ.ahora + ms, cada: cada ? Math.max(1, ms) : 0, fn: fn, args: args })
+      return id
+    }
+    function cancelar(id) { RELOJ.timers = RELOJ.timers.filter(function (t) { return t.id !== id }) }
+    window.setTimeout = function (fn, ms) { return programar(fn, ms, false, [].slice.call(arguments, 2)) }
+    window.setInterval = function (fn, ms) { return programar(fn, ms, true, [].slice.call(arguments, 2)) }
+    window.clearTimeout = window.clearInterval = cancelar
+    performance.now = function () { return RELOJ.ahora }
+    Date.now = function () { return 1700000000000 + RELOJ.ahora }
+
+    // El azar de la revisión siempre es el mismo: así nunca pasa "a veces sí, a veces no".
+    var semilla = 20261120
+    Math.random = function () {
+      semilla = (semilla * 1664525 + 1013904223) % 4294967296
+      return semilla / 4294967296
+    }
+  }
+
+  /* Un cuadro: 1/60 de segundo. Primero los temporizadores que vencían, luego la animación. */
+  function unCuadro() {
+    var meta = RELOJ.ahora + 1000 / 60
+    for (var vueltas = 0; vueltas < 500; vueltas++) {
+      var prox = null
+      for (var i = 0; i < RELOJ.timers.length; i++) {
+        var t = RELOJ.timers[i]
+        if (t.cuando <= meta && (!prox || t.cuando < prox.cuando)) prox = t
+      }
+      if (!prox) break
+      RELOJ.ahora = prox.cuando
+      if (prox.cada) prox.cuando += prox.cada
+      else RELOJ.timers = RELOJ.timers.filter(function (x) { return x !== prox })
+      prox.fn.apply(window, prox.args)
+    }
+    RELOJ.ahora = meta
+    var lista = RELOJ.cuadros
+    RELOJ.cuadros = []
+    for (var k = 0; k < lista.length; k++) lista[k].fn(RELOJ.ahora)
+  }
+
+  /* --------------------------------------------------------- ayudas de revisión */
+
+  // Se pueden usar dentro de las pruebas: __pixel(x, y) y __pintado().
+  window.__pixel = function (x, y) {
+    var d = lienzo.getContext('2d').getImageData(Math.round(x), Math.round(y), 1, 1).data
+    return [d[0], d[1], d[2]]
+  }
+  /* Cuántos puntos del lienzo (mirando 1 de cada 4×4) tienen algo pintado que no sea el fondo. */
+  window.__pintado = function () {
+    var d = lienzo.getContext('2d').getImageData(0, 0, lienzo.width, lienzo.height).data
+    var fondo = [d[0], d[1], d[2]]
+    var n = 0
+    for (var y = 0; y < lienzo.height; y += 4) {
+      for (var x = 0; x < lienzo.width; x += 4) {
+        var i = (y * lienzo.width + x) * 4
+        if (Math.abs(d[i] - fondo[0]) + Math.abs(d[i + 1] - fondo[1]) + Math.abs(d[i + 2] - fondo[2]) > 30) n++
+      }
+    }
+    return n
+  }
+  var evaluar = eval // eval indirecto: ve las variables globales del juego (let y const incluidas)
+
+  function tecla(key, suelta) {
+    var codigos = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, ' ': 32, Enter: 13 }
+    var code = key === ' ' ? 'Space' : key.length === 1 ? 'Key' + key.toUpperCase() : key
+    var ev = new KeyboardEvent(suelta ? 'keyup' : 'keydown', { key: key, code: code, bubbles: true, cancelable: true })
+    try { Object.defineProperty(ev, 'keyCode', { get: function () { return codigos[key] || key.toUpperCase().charCodeAt(0) } }) } catch (e) {}
+    ;(document.activeElement || document.body).dispatchEvent(ev)
+  }
+
+  function revisar(pasos) {
+    var resultados = []
+    for (var i = 0; i < pasos.length; i++) {
+      var p = pasos[i]
+      try {
+        if (p.t === 'cuadros') { for (var n = 0; n < p.n; n++) unCuadro() }
+        else if (p.t === 'tecla') tecla(p.key, false)
+        else if (p.t === 'soltar') tecla(p.key, true)
+        else if (p.t === 'ejecutar') evaluar(p.js)
+        else if (p.t === 'ver') {
+          var ok = false
+          try { ok = !!evaluar(p.js) } catch (e) { ok = false }
+          resultados.push({ ok: ok, msg: p.msg })
+        }
+      } catch (e) {
+        // El juego se rompió durante la revisión: lo que faltaba por mirar cuenta como no logrado.
+        for (var j = i; j < pasos.length; j++) if (pasos[j].t === 'ver') resultados.push({ ok: false, msg: pasos[j].msg })
+        return { resultados: resultados, error: (e && e.name ? e.name + ': ' + e.message : String(e)) }
+      }
+    }
+    return { resultados: resultados }
+  }
+
+  /* ------------------------------------------------------------------ correr */
+
+  window.addEventListener('message', function (ev) {
+    var job = ev.data
+    if (!job || job.__ar !== 'run' || CORRIDA) return
+    CORRIDA = job
+    if (job.modo === 'revisar') relojDeMentira()
+
+    var s = document.createElement('script')
+    s.textContent = job.codigo + '\n//# sourceURL=mi-juego.js'
+    document.body.appendChild(s)
+
+    if (job.modo === 'revisar') {
+      if (errorYaContado) {
+        enviar({ __ar: 'resultado', id: job.id, resultados: [], error: 'roto' })
+        return
+      }
+      var r = revisar(job.pruebas || [])
+      enviar({ __ar: 'resultado', id: job.id, resultados: r.resultados, error: r.error })
+    } else {
+      lienzo.focus()
+      enviar({ __ar: 'corriendo', id: job.id })
+    }
+  })
+
+  enviar({ __ar: 'ready' })
+})()
+</script>
+</body>
+</html>
