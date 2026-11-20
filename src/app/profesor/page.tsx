@@ -126,6 +126,19 @@ export default function Profesor() {
           <a href="/profesor/examen" className="boton boton-primario">
             🐍 Examen de Python
           </a>
+          <button
+            onClick={() => {
+              try {
+                sessionStorage.setItem('profesor:clave-informes', clave)
+              } catch {
+                /* sin almacenamiento: allá se escribe otra vez */
+              }
+              window.location.href = '/profesor/informes'
+            }}
+            className="boton boton-secundario"
+          >
+            📁 Informes
+          </button>
           <button onClick={entrar} disabled={cargando} className="boton boton-secundario inline-flex items-center gap-2 disabled:opacity-70">
             <span className={cargando ? 'inline-block animate-spin' : 'inline-block'}>↻</span>
             {cargando ? 'Actualizando…' : 'Actualizar'}
