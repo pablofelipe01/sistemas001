@@ -113,3 +113,30 @@ comment on column public.examenes.salidas       is 'Cuántas veces salió de la 
 comment on column public.examenes.capturas      is 'Intentos de captura de pantalla que se alcanzaron a ver (Imprimir pantalla, Cmd+Shift, Win+Shift).';
 
 alter table public.examenes enable row level security;
+
+-- La arena de juegos (/arena): cada alumno arma juegos parte por parte y los publica en la galería.
+create table if not exists public.arena (
+  slug              text not null,
+  juego             text not null,
+  nombre            text not null,
+  hechas            jsonb   not null default '[]'::jsonb,
+  teclas            integer not null default 0,
+  pegados           integer not null default 0,
+  codigo            text    not null default '',
+  titulo            text,
+  codigo_publicado  text,
+  publicado_en      timestamptz,
+  oculto            boolean not null default false,
+  jugadas           integer not null default 0,
+  actualizado       timestamptz not null default now(),
+  primary key (slug, juego)
+);
+
+create index if not exists arena_publicado_idx on public.arena (publicado_en desc) where codigo_publicado is not null;
+
+comment on table  public.arena                  is 'Arena de juegos: un renglón por alumno y juego (fruta, meteoritos, pingpong o libre). Partes hechas, teclas, pegados, el código y, si lo publicó, la copia que se ve en la galería.';
+comment on column public.arena.hechas           is 'Los id de las partes cumplidas (f1, f2…), en orden. En el libre queda vacío.';
+comment on column public.arena.codigo_publicado is 'La copia del juego que se ve en la galería. Solo cambia cuando el alumno vuelve a publicar.';
+comment on column public.arena.oculto           is 'El profesor lo sacó de la galería.';
+
+alter table public.arena enable row level security;

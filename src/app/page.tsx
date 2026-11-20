@@ -181,6 +181,21 @@ export default function Entrada() {
         </a>
       </section>
 
+      <section className="panel flex flex-wrap items-center justify-between gap-4 border-[#3f3410] p-5">
+        <div>
+          <p className="etiqueta mb-1">Nuevo · actividad recreativa</p>
+          <h2 className="text-sm font-bold text-[#e2e8ff]">🕹️ La arena de juegos</h2>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#8fa1c6]">
+            Arma tu propio juego, parte por parte, con JavaScript: atrapa la fruta, esquiva meteoritos o un ping pong
+            para dos. Lo ves funcionando en pantalla, lo juegas, lo cambias a tu gusto y lo publicas en la galería del
+            salón. O inventa uno desde cero.
+          </p>
+        </div>
+        <a href="/arena" className="boton boton-primario">
+          Entrar a la arena ▶
+        </a>
+      </section>
+
       <section className="panel flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="etiqueta mb-1">Para el recreo</p>

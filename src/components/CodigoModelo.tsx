@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { EditorState } from '@codemirror/state'
-import { EditorView, lineNumbers } from '@codemirror/view'
+import { EditorState, RangeSetBuilder } from '@codemirror/state'
+import { Decoration, EditorView, lineNumbers } from '@codemirror/view'
 import { syntaxHighlighting } from '@codemirror/language'
 import { coloresSintaxis, extensionDeLenguaje, temaTerminal, type LangEditor } from './Terminal'
 
@@ -15,6 +15,23 @@ import { coloresSintaxis, extensionDeLenguaje, temaTerminal, type LangEditor } f
  * Quien abra las herramientas del navegador se lo salta, claro; no se trata de
  * blindar nada, sino de que el camino cómodo sea teclear.
  */
+/** Las líneas nuevas de una parte (la arena de juegos), pintadas de verde. */
+const lineaNueva = Decoration.line({ class: 'cm-linea-nueva' })
+const temaResaltado = EditorView.theme({
+  '.cm-linea-nueva': { backgroundColor: 'rgba(74, 222, 128, 0.13)', boxShadow: 'inset 3px 0 0 #4ade80' },
+})
+
+function resaltarLineas(state: EditorState, lineas: number[]) {
+  const b = new RangeSetBuilder<Decoration>()
+  for (const n of [...lineas].sort((x, y) => x - y)) {
+    if (n >= 1 && n <= state.doc.lines) {
+      const l = state.doc.line(n)
+      b.add(l.from, l.from, lineaNueva)
+    }
+  }
+  return EditorView.decorations.of(b.finish())
+}
+
 const sinSeleccion = EditorView.theme({
   '.cm-content, .cm-line': {
     userSelect: 'none',
@@ -27,11 +44,15 @@ export function CodigoModelo({
   lang,
   codigo,
   onIntentoDeCopia,
+  resaltar,
 }: {
   lang: LangEditor
   codigo: string
   onIntentoDeCopia: () => void
+  /** Números de línea (desde 1) que se pintan de verde. */
+  resaltar?: number[]
 }) {
+  const claveResaltar = (resaltar ?? []).join(',')
   const caja = useRef<HTMLDivElement>(null)
   const avisar = useRef(onIntentoDeCopia)
   avisar.current = onIntentoDeCopia
@@ -61,6 +82,8 @@ export function CodigoModelo({
       },
     })
 
+    const lineas = claveResaltar ? claveResaltar.split(',').map(Number) : []
+    const base = EditorState.create({ doc: codigo })
     const view = new EditorView({
       parent: caja.current,
       state: EditorState.create({
@@ -75,12 +98,19 @@ export function CodigoModelo({
           sinSeleccion,
           EditorView.lineWrapping,
           guardia,
+          ...(lineas.length ? [temaResaltado, resaltarLineas(base, lineas)] : []),
         ],
       }),
     })
 
+    // Que se vea de una la primera línea nueva.
+    if (lineas.length) {
+      const primera = view.state.doc.line(Math.min(Math.min(...lineas), view.state.doc.lines))
+      requestAnimationFrame(() => view.dispatch({ effects: EditorView.scrollIntoView(primera.from, { y: 'center' }) }))
+    }
+
     return () => view.destroy()
-  }, [lang, codigo])
+  }, [lang, codigo, claveResaltar])
 
   return <div ref={caja} className="h-full overflow-hidden" />
 }
